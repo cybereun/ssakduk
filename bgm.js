@@ -145,18 +145,25 @@
     '.bgm .eq i:nth-child(2){animation-delay:.25s}.bgm .eq i:nth-child(3){animation-delay:.5s}' +
     '@keyframes bgmeq{0%,100%{height:4px}50%{height:14px}}' +
     '@media (prefers-reduced-motion:reduce){.bgm .eq i{animation:none;height:9px}}' +
-    '.bgm.inline{position:static;right:auto;bottom:auto;padding:11px 18px 11px 15px;font-size:15px}' +
+    '.bgm.inline{position:relative;right:auto;bottom:auto;padding:11px 18px 11px 15px;font-size:15px}' +
+    '.bgm .hint{display:none;position:absolute;bottom:calc(100% + 12px);right:0;padding:9px 14px;border-radius:14px;background:#fff6e4;color:#3a2420;font:700 14px/1.35 "Noto Sans KR","Malgun Gothic",system-ui,sans-serif;white-space:nowrap;box-shadow:0 10px 24px -8px rgba(0,0,0,.55);pointer-events:none;animation:bgmhint 1.8s ease-in-out infinite}' +
+    '.bgm .hint::after{content:"";position:absolute;top:100%;right:26px;border:7px solid transparent;border-top-color:#fff6e4}' +
+    '.bgm.inline .hint{right:auto;left:0}.bgm.inline .hint::after{right:auto;left:26px}' +
+    '.bgm.wait .hint{display:block}.bgm.wait{animation:bgmring 1.8s ease-out infinite}' +
+    '@keyframes bgmhint{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}' +
+    '@keyframes bgmring{0%{box-shadow:0 0 0 0 rgba(255,214,120,.75)}100%{box-shadow:0 0 0 16px rgba(255,214,120,0)}}' +
     '@media (max-width:480px){.bgm:not(.inline){padding:10px 13px}.bgm:not(.inline) .txt{display:none}}';
   document.head.appendChild(css);
 
   var btn = document.createElement('button');
   btn.type = 'button'; btn.className = 'bgm';
   btn.title = '잔잔한 캐롤 · 고요한 밤 (오르골)';
-  btn.innerHTML = '<span class="ico" aria-hidden="true">🎵</span><span class="txt"></span><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>';
+  btn.innerHTML = '<span class="ico" aria-hidden="true">🎵</span><span class="txt"></span><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="hint" aria-hidden="true">🔊 화면을 한 번 누르면 캐롤이 시작돼요</span>';
 
   function playing() { return on && !!ctx && ctx.state === 'running'; }
   function render() {
     var p = playing();
+    btn.classList.toggle('wait', on && !p);
     btn.setAttribute('aria-pressed', p ? 'true' : 'false');
     btn.setAttribute('aria-label', p ? '캐롤 끄기' : '캐롤 켜기');
     btn.querySelector('.txt').textContent = p ? '캐롤 끄기' : '캐롤 듣기';
@@ -189,7 +196,7 @@
       if (ctx && ctx.state === 'running') { cleanup(); return; }
       start();
     };
-    var evs = ['pointerdown', 'touchend', 'keydown', 'click'];
+    var evs = ['pointerdown', 'pointerup', 'mousedown', 'touchstart', 'touchend', 'keydown', 'click'];
     var cleanup = function () { evs.forEach(function (t) { document.removeEventListener(t, kick, true); }); };
     evs.forEach(function (t) { document.addEventListener(t, kick, true); });
   }
@@ -209,6 +216,7 @@
       var s = 0; for (var i = 0; i < d.length; i++) s += d[i] * d[i];
       return Math.sqrt(s / d.length);
     },
-    get state() { return ctx ? ctx.state : 'none'; }
+    get state() { return ctx ? ctx.state : 'none'; },
+    _ctx: function () { return ctx; }
   };
 })();
