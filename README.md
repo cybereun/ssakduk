@@ -47,3 +47,8 @@
 - 여러 상자를 한 롤에 테트리스처럼 배치하고 자투리 활용 제안
 - 재단 템플릿을 실물 크기로 A4 여러 장에 나눠 인쇄
 - 카메라로 상자 치수 재기
+
+## 저작권 · 개발자
+- © 2026 cybereun. All rights reserved.
+- 개발자: [cybereun](https://github.com/cybereun)
+- 사용한 것: Three.js r149(MIT), Google Fonts의 Black Han Sans · Gaegu · Noto Sans KR · JetBrains Mono(SIL OFL 1.1), 「고요한 밤」(1818, 저작권 만료)을 브라우저에서 직접 합성한 BGM

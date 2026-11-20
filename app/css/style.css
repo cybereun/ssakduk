@@ -246,3 +246,18 @@ input[type="range"] { width: 100%; accent-color: var(--red); height: 24px; margi
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ───── 하단 저작권 · 개발자 ───── */
+.appfoot { max-width: 1240px; margin: 34px auto 0; padding-top: 22px; border-top: 1.5px dashed var(--line-strong); }
+.legal { display: grid; justify-items: center; gap: 12px; text-align: center; }
+.dev-row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px 14px; }
+.devbadge { display: inline-flex; align-items: stretch; border-radius: 999px; overflow: hidden; text-decoration: none; border: 1.5px solid var(--ink); font: 700 13.5px/1 var(--f-body); color: var(--ink); transition: transform .15s; }
+.devbadge:hover { transform: translateY(-2px); }
+.devbadge svg { align-self: center; margin: 0 8px 0 12px; }
+.devbadge .role { display: flex; align-items: center; padding: 8px 10px 8px 0; }
+.devbadge .who { display: flex; align-items: center; padding: 8px 14px; background: var(--ink); color: var(--card); }
+.devlink { color: var(--ink-2); font-weight: 700; font-size: 13.5px; text-underline-offset: 4px; }
+.copy { font-size: 13px; color: var(--ink-2); }
+.credits { max-width: 560px; font-size: 13px; color: var(--ink-2); text-align: left; }
+.credits summary { cursor: pointer; text-align: center; font-weight: 700; color: var(--ink); }
+.credits ul { margin: 10px 0 0; padding-left: 18px; display: grid; gap: 6px; }
