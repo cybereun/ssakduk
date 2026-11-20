@@ -49,6 +49,7 @@
 
   function build() {
     ctx = new AC();
+    ctx.onstatechange = function () { render(); };
     master = ctx.createGain(); master.gain.value = 0;
     analyser = ctx.createAnalyser(); analyser.fftSize = 1024;
     var rev = ctx.createConvolver(); rev.buffer = impulse(ctx, 3.2);
@@ -115,13 +116,12 @@
   function start() {
     clearTimeout(closeTimer);
     if (!ctx) { build(); bar = 0; nextT = 0; }
-    var go = function () {
-      if (nextT < ctx.currentTime + .2) nextT = ctx.currentTime + .25;
-      master.gain.cancelScheduledValues(ctx.currentTime);
-      master.gain.setTargetAtTime(.62, ctx.currentTime, .6);
-      clearInterval(timer); tick(); timer = setInterval(tick, 400);
-    };
-    if (ctx.state === 'suspended') ctx.resume().then(go, go); else go();
+    if (nextT < ctx.currentTime + .2) nextT = ctx.currentTime + .25;
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setTargetAtTime(.62, ctx.currentTime, .6);
+    clearInterval(timer); tick(); timer = setInterval(tick, 400);
+    if (ctx.state === 'suspended') ctx.resume().then(render, render);
+    render();
   }
 
   function stop() {
@@ -130,7 +130,7 @@
     master.gain.cancelScheduledValues(ctx.currentTime);
     master.gain.setTargetAtTime(0, ctx.currentTime, .35);
     var c = ctx;
-    closeTimer = setTimeout(function () { try { c.close(); } catch (e) { } if (ctx === c) { ctx = null; } }, 2200);
+    closeTimer = setTimeout(function () { try { c.close(); } catch (e) { } if (ctx === c) { ctx = null; } render(); }, 2200);
   }
 
   /* ───── 버튼 ───── */
@@ -154,16 +154,19 @@
   btn.title = '잔잔한 캐롤 · 고요한 밤 (오르골)';
   btn.innerHTML = '<span class="ico" aria-hidden="true">🎵</span><span class="txt"></span><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>';
 
+  function playing() { return on && !!ctx && ctx.state === 'running'; }
   function render() {
-    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-    btn.setAttribute('aria-label', on ? '캐롤 끄기' : '캐롤 켜기');
-    btn.querySelector('.txt').textContent = on ? '캐롤 끄기' : '캐롤 듣기';
+    var p = playing();
+    btn.setAttribute('aria-pressed', p ? 'true' : 'false');
+    btn.setAttribute('aria-label', p ? '캐롤 끄기' : '캐롤 켜기');
+    btn.querySelector('.txt').textContent = p ? '캐롤 끄기' : '캐롤 듣기';
   }
   function save() { try { localStorage.setItem(KEY, on ? 'on' : 'off'); } catch (e) { } }
 
   btn.addEventListener('click', function () {
-    on = !on; render(); save();
-    if (on) start(); else stop();
+    if (playing()) { on = false; save(); stop(); }
+    else { on = true; save(); start(); }
+    render();
   });
 
   function mount() {
@@ -173,17 +176,22 @@
   }
   if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
 
-  /* 지난번에 켜 두었다면, 브라우저 규칙상 첫 클릭·터치 때 이어서 재생 */
+  /* 접속하면 바로 재생. 브라우저가 소리를 막으면, 첫 클릭·터치·키 입력에서 바로 시작한다.
+   * 사용자가 직접 끈 적이 있으면(저장값 off) 자동으로 켜지 않는다. */
   var saved = null;
   try { saved = localStorage.getItem(KEY); } catch (e) { }
-  if (saved === 'on') {
+  if (saved !== 'off') {
     on = true;
+    start();
     var kick = function (e) {
-      if (btn.contains(e.target)) { cleanup(); return; }
-      cleanup(); if (on) start();
+      if (btn.contains(e.target)) return;        // 버튼은 자기 클릭 처리에서 시작
+      if (!on) { cleanup(); return; }
+      if (ctx && ctx.state === 'running') { cleanup(); return; }
+      start();
     };
-    var cleanup = function () { ['pointerdown', 'keydown'].forEach(function (t) { document.removeEventListener(t, kick, true); }); };
-    ['pointerdown', 'keydown'].forEach(function (t) { document.addEventListener(t, kick, true); });
+    var evs = ['pointerdown', 'touchend', 'keydown', 'click'];
+    var cleanup = function () { evs.forEach(function (t) { document.removeEventListener(t, kick, true); }); };
+    evs.forEach(function (t) { document.addEventListener(t, kick, true); });
   }
 
   /* 탭이 가려지면 조용히 멈추고, 돌아오면 이어서 */
