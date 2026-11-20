@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>싹둑 — 포장지 재단 계산기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gaegu:wght@400;700&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2314463a'/%3E%3Cpath d='M12 24h40v28H12z' fill='%23c9372c'/%3E%3Crect x='28' y='24' width='8' height='28' fill='%23f3d27a'/%3E%3Cpath d='M32 24c-10-14-22-6-14 0zM32 24c10-14 22-6 14 0z' fill='none' stroke='%23f3d27a' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="../" aria-label="싹둑 처음 화면">
+      <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+        <rect x="2" y="2" width="44" height="44" rx="12" fill="var(--mat)"/>
+        <path d="M10 22h28v18H10z" fill="var(--red)"/>
+        <rect x="21" y="22" width="6" height="18" fill="var(--gold)"/>
+        <path d="M24 22c-8-11-17-4-11 0zM24 22c8-11 17-4 11 0z" fill="none" stroke="var(--gold)" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M31 8l-14 14M17 8l14 14" stroke="#fff" stroke-width="0" />
+      </svg>
+      <span class="brand-name">싹둑</span>
+      <span class="brand-sub">포장지 재단 계산기</span>
+    </a>
+    <button class="icon-btn" id="theme-btn" type="button" aria-label="화면 테마 바꾸기" title="화면 테마 바꾸기">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+  <div class="trim" aria-hidden="true"></div>
+</header>
+
+<main class="app">
+
+  <!-- ───────── 왼쪽: 입력 ───────── -->
+  <aside class="controls" aria-label="포장 정보 입력">
+
+    <section class="card" id="c-shape" aria-labelledby="h-shape">
+      <h2 id="h-shape">무엇을 포장하나요?</h2>
+      <div class="shapes" role="radiogroup" aria-labelledby="h-shape" id="shapes">
+        <button type="button" class="shape" role="radio" data-shape="box" aria-checked="true">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 8 56 20v24L32 56 8 44V20z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M8 20l24 12 24-12M32 32v24" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>
+          <span>상자</span>
+        </button>
+        <button type="button" class="shape" role="radio" data-shape="cyl" aria-checked="false">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="16" rx="18" ry="7" fill="none" stroke="currentColor" stroke-width="3"/><path d="M14 16v32c0 4 8 7 18 7s18-3 18-7V16" fill="none" stroke="currentColor" stroke-width="3"/></svg>
+          <span>원통</span>
+        </button>
+        <button type="button" class="shape" role="radio" data-shape="bottle" aria-checked="false">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M27 6h10v14c0 6 11 8 11 18v18c0 2-2 4-4 4H20c-2 0-4-2-4-4V38c0-10 11-12 11-18z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M16 40h32" stroke="currentColor" stroke-width="3"/></svg>
+          <span>병</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="card" id="c-size" aria-labelledby="h-size">
+      <div class="card-head">
+        <h2 id="h-size">크기</h2>
+        <span class="unit-tag">단위 cm</span>
+      </div>
+      <div id="dims" class="dims"></div>
+      <div class="presets" id="presets" aria-label="자주 쓰는 크기"></div>
+    </section>
+
+    <section class="card" id="c-paper" aria-labelledby="h-paper">
+      <h2 id="h-paper">내 포장지</h2>
+      <div class="seg" role="radiogroup" aria-labelledby="h-paper" id="paper-type">
+        <button type="button" role="radio" data-type="roll" aria-checked="true">롤</button>
+        <button type="button" role="radio" data-type="sheet" aria-checked="false">낱장</button>
+        <button type="button" role="radio" data-type="none" aria-checked="false">제한 없음</button>
+      </div>
+      <div id="paper-fields" class="paper-fields"></div>
+      <div class="field slim">
+        <label for="ovl">이음 겹침</label>
+        <input type="range" id="ovl" min="2" max="6" step="0.5" value="3">
+        <output id="ovl-out" for="ovl">3 cm</output>
+      </div>
+    </section>
+
+    <section class="card" id="c-style" aria-labelledby="h-style">
+      <h2 id="h-style">꾸미기</h2>
+      <div class="label-s">포장지 무늬</div>
+      <div class="swatches" id="patterns" role="radiogroup" aria-label="포장지 무늬"></div>
+      <div class="label-s">리본 색</div>
+      <div class="swatches" id="ribbons" role="radiogroup" aria-label="리본 색"></div>
+    </section>
+  </aside>
+
+  <!-- ───────── 오른쪽: 결과 ───────── -->
+  <section class="workspace" aria-label="계산 결과">
+
+    <div class="tag" id="result" aria-live="polite">
+      <div class="tag-hole" aria-hidden="true"></div>
+      <div class="tag-main">
+        <div class="tag-kicker" id="r-kicker">필요한 포장지</div>
+        <div class="tag-size"><span id="r-w">–</span><i>×</i><span id="r-h">–</span><small>cm</small></div>
+        <div class="tag-note" id="r-note"></div>
+      </div>
+      <div class="tag-side">
+        <div class="status" id="r-status"></div>
+        <div class="metrics">
+          <div class="metric"><span class="m-label">종이 이용률</span><span class="m-val" id="r-eff">–</span></div>
+          <div class="metric"><span class="m-label" id="r-left-label">남는 종이</span><span class="m-val" id="r-left">–</span></div>
+        </div>
+        <div class="stars" id="r-stars" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <div class="stagecard">
+      <div class="stage-top">
+        <div class="tabs" role="tablist" aria-label="보기 전환">
+          <button type="button" role="tab" id="tab-cut" aria-selected="true" aria-controls="panel-cut">✂ 재단도</button>
+          <button type="button" role="tab" id="tab-wrap" aria-selected="false" aria-controls="panel-wrap">🎁 포장 미리보기</button>
+        </div>
+        <div class="stage-tools" id="tools-cut">
+          <label class="check"><input type="checkbox" id="chk-folds" checked><span>접는 선</span></label>
+          <button type="button" class="btn ghost sm" id="btn-recut">↻ 다시 자르기</button>
+        </div>
+        <div class="stage-tools" id="tools-wrap" hidden>
+          <label class="check"><input type="checkbox" id="chk-auto" checked><span>자동 카메라</span></label>
+        </div>
+      </div>
+
+      <div class="stage" id="stage">
+        <div id="panel-cut" role="tabpanel" aria-labelledby="tab-cut" class="panel">
+          <svg id="cut" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="포장지 재단선과 접는 선 도면"></svg>
+        </div>
+        <div id="panel-wrap" role="tabpanel" aria-labelledby="tab-wrap" class="panel" hidden>
+          <div id="gl" class="gl"></div>
+          <div class="cap" id="cap" aria-live="polite"></div>
+          <div class="gl-hint" id="gl-hint">드래그로 돌려 보고, 휠로 확대해요</div>
+          <div class="gl-fail" id="gl-fail" hidden>이 브라우저에서는 3D 미리보기를 열 수 없어요. 재단도는 그대로 쓸 수 있어요.</div>
+        </div>
+      </div>
+
+      <div class="player" id="player" hidden>
+        <button type="button" class="play" id="btn-play" aria-label="재생">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path id="ico-play" d="M8 5v14l11-7z" fill="currentColor"/></svg>
+        </button>
+        <div class="scrub">
+          <div class="marks" id="marks"></div>
+          <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="포장 진행 위치">
+        </div>
+        <button type="button" class="btn ghost sm" id="btn-speed" aria-label="재생 속도">1×</button>
+        <button type="button" class="btn ghost sm" id="btn-restart" aria-label="처음부터">⏮</button>
+      </div>
+      <div class="chips-steps" id="step-chips" hidden></div>
+    </div>
+
+    <div class="card" id="options-card" hidden>
+      <div class="card-head">
+        <h2>어느 방향으로 감쌀까요?</h2>
+        <span class="unit-tag">같은 상자도 방향에 따라 종이가 달라져요</span>
+      </div>
+      <div class="options" id="options" role="radiogroup" aria-label="감싸는 방향"></div>
+    </div>
+
+    <div class="card" id="steps-card">
+      <div class="card-head"><h2>자르는 순서</h2><span class="unit-tag" id="steps-sub"></span></div>
+      <ol class="steps" id="steps"></ol>
+    </div>
+
+    <p class="fine">치수는 상자 바깥 크기 기준의 근사값이에요. 종이 두께와 접는 습관에 따라 ±1cm 정도 달라질 수 있어요.</p>
+  </section>
+</main>
+
+<script src="vendor/three.min.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/diagram.js"></script>
+<script src="js/stage3d.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

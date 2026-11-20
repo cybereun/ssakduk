@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>싹둑 — 크리스마스 선물 포장지 계산기</title>
+<meta name="description" content="상자·원통·병 크기만 넣으면 필요한 포장지 크기와 재단선을 알려 주고, 포장되는 모습까지 미리 보여 주는 무료 웹앱.">
+<meta property="og:title" content="싹둑 — 선물 포장지, 딱 맞게 싹둑!">
+<meta property="og:description" content="크기만 넣으면 포장지 재단선과 3D 포장 애니메이션까지. 크리스마스 선물 포장 도우미.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0d3a2d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gaegu:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2314463a'/%3E%3Cpath d='M12 24h40v28H12z' fill='%23c9372c'/%3E%3Crect x='28' y='24' width='8' height='28' fill='%23f3d27a'/%3E%3Cpath d='M32 24c-10-14-22-6-14 0zM32 24c10-14 22-6 14 0z' fill='none' stroke='%23f3d27a' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+/* 싹둑 랜딩 — 눈 오는 크리스마스 이브 밤
+ * 레이아웃: 전구 줄 → 히어로(글 + 선물 일러스트) → 크림색 안내 구간 → 눈 쌓인 마지막 호출
+ * 팔레트: 솔잎 초록 · 리본 빨강 · 금빛 · 눈 크림 · 딸기 분홍(사랑스러움 포인트) */
+:root {
+  --night: #0a2b22; --pine: #0f3b2e; --pine-2: #17503f;
+  --red: #d63a30; --red-deep: #a82a22; --gold: #f4c453; --cream: #fff6e4; --paper: #fffaf0;
+  --pink: #ffc2cf; --ink: #3a2420; --ink-soft: #7a5a50; --mint: #bfe8d4;
+  --f-display: "Black Han Sans", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --f-body: "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --f-hand: "Gaegu", "Noto Sans KR", cursive;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--night); color: var(--cream); font: 400 17px/1.65 var(--f-body); overflow-x: hidden; }
+h1, h2, h3, p { margin: 0; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; border-radius: 10px; }
+.wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+
+/* ───── 전구 줄 ───── */
+.garland { position: absolute; left: 0; right: 0; top: 0; height: 64px; pointer-events: none; z-index: 5; overflow: hidden; }
+.garland::before { content: ""; position: absolute; left: -2%; right: -2%; top: -30px; height: 70px; border-bottom: 3px solid #1b5a48; border-radius: 50%; }
+.garland i { position: absolute; width: 14px; height: 20px; border-radius: 50% 50% 55% 55%; background: var(--c); box-shadow: 0 0 14px 4px var(--c); animation: twinkle 2.4s ease-in-out infinite; }
+.garland i::before { content: ""; position: absolute; left: 3px; top: -5px; width: 8px; height: 7px; background: #20473b; border-radius: 2px; }
+@keyframes twinkle { 0%, 100% { opacity: 1; transform: scale(1) } 50% { opacity: .45; transform: scale(.88) } }
+
+/* ───── 위쪽 띠 ───── */
+.top { position: relative; z-index: 6; padding-top: 70px; }
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo svg { width: 40px; height: 40px; }
+.logo b { font: 400 30px/1 var(--f-display); color: var(--gold); letter-spacing: -.02em; }
+.pill { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; text-decoration: none; font-weight: 700; white-space: nowrap; }
+.pill.small { padding: 9px 18px; background: rgba(255, 246, 228, .12); border: 1.5px solid rgba(255, 246, 228, .35); font-size: 15px; transition: background .2s, transform .2s; }
+.pill.small:hover { background: rgba(255, 246, 228, .22); transform: translateY(-2px); }
+
+/* ───── 히어로 ───── */
+.hero { position: relative; background: radial-gradient(1200px 600px at 75% 30%, #1e6a53 0%, transparent 60%), linear-gradient(180deg, #0c3a2d 0%, #0a2b22 100%); overflow: hidden; }
+#snow { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+.hero-in { position: relative; z-index: 3; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 20px; align-items: center; padding-block: 30px 90px; }
+.kicker { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: rgba(255, 194, 207, .16); color: var(--pink); font: 700 20px/1.2 var(--f-hand); border: 1.5px dashed rgba(255, 194, 207, .55); }
+h1 { margin-top: 18px; font: 400 clamp(44px, 8vw, 92px)/1.04 var(--f-display); letter-spacing: -.03em; text-wrap: balance; text-shadow: 0 4px 0 rgba(0, 0, 0, .22); }
+h1 em { font-style: normal; color: var(--gold); display: inline-block; position: relative; }
+h1 em::after { content: ""; position: absolute; left: -2%; right: -2%; bottom: -.04em; height: .16em; background: var(--red); border-radius: 99px; transform: rotate(-1.5deg); z-index: -1; }
+.lead { margin-top: 22px; font-size: clamp(17px, 2.2vw, 21px); color: #e8f3ea; max-width: 30em; text-wrap: pretty; }
+.cta-row { margin-top: 30px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; }
+.btn { position: relative; display: inline-flex; align-items: center; gap: 12px; padding: 18px 34px; border-radius: 999px; background: linear-gradient(180deg, #f0584c, var(--red)); color: #fff; text-decoration: none; font: 700 22px/1 var(--f-body); box-shadow: 0 7px 0 var(--red-deep), 0 18px 30px -10px rgba(0, 0, 0, .55); transition: transform .15s, box-shadow .15s; }
+.btn:hover { transform: translateY(-3px); box-shadow: 0 10px 0 var(--red-deep), 0 22px 34px -10px rgba(0, 0, 0, .6); }
+.btn:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--red-deep), 0 8px 14px -6px rgba(0, 0, 0, .5); }
+.btn span.gift { font-size: 26px; display: inline-block; animation: wiggle 2.6s ease-in-out infinite; }
+.btn::after { content: "→"; font-size: 24px; transition: transform .2s; }
+.btn:hover::after { transform: translateX(5px); }
+.btn.big { padding: 22px 44px; font-size: 26px; }
+.link-soft { color: var(--mint); font-weight: 700; text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 2px; }
+.perks { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 0; list-style: none; color: #cfe6d8; font-size: 15px; }
+.perks li::before { content: "✓"; color: var(--gold); font-weight: 700; margin-right: 6px; }
+.dday { margin-top: 26px; display: inline-flex; align-items: baseline; gap: 10px; padding: 8px 18px; border-radius: 18px; background: rgba(0, 0, 0, .25); border: 1.5px solid rgba(244, 196, 83, .45); }
+.dday span { font: 700 20px var(--f-hand); color: var(--gold); }
+.dday b { font: 400 34px/1 var(--f-display); color: #fff; }
+@keyframes wiggle { 0%, 100% { transform: rotate(0) } 10% { transform: rotate(-12deg) } 20% { transform: rotate(10deg) } 30% { transform: rotate(-6deg) } 40% { transform: rotate(0) } }
+
+/* 일러스트 */
+.scene { position: relative; justify-self: center; width: min(100%, 520px); }
+.scene svg { width: 100%; height: auto; overflow: visible; display: block; }
+.float { animation: bob 3.6s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes bob { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
+.bow { transform-box: fill-box; transform-origin: 50% 90%; animation: bowwig 3.6s ease-in-out infinite; }
+@keyframes bowwig { 0%, 100% { transform: rotate(-2deg) } 50% { transform: rotate(2.5deg) } }
+.spark { transform-box: fill-box; transform-origin: center; animation: spark 2.2s ease-in-out infinite; }
+@keyframes spark { 0%, 100% { transform: scale(.3) rotate(0); opacity: .2 } 50% { transform: scale(1) rotate(45deg); opacity: 1 } }
+.blade-a { animation: snipA .9s ease-in-out infinite; }
+.blade-b { animation: snipB .9s ease-in-out infinite; }
+@keyframes snipA { 0%, 100% { transform: rotate(2deg) } 50% { transform: rotate(20deg) } }
+@keyframes snipB { 0%, 100% { transform: rotate(-2deg) } 50% { transform: rotate(-20deg) } }
+.snipbit { animation: fall 2.4s ease-in infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes fall { 0% { transform: translate(0, -6px) rotate(0); opacity: 0 } 15% { opacity: 1 } 100% { transform: translate(-26px, 74px) rotate(190deg); opacity: 0 } }
+
+/* 눈 쌓인 언덕 */
+.hills { position: absolute; left: 0; right: 0; bottom: -1px; z-index: 2; line-height: 0; }
+.hills svg { width: 100%; height: 90px; display: block; }
+
+/* ───── 안내 구간 ───── */
+.paper { position: relative; background: var(--cream); color: var(--ink); padding-block: 84px 90px; }
+.paper::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 12px; background: repeating-linear-gradient(-45deg, var(--red) 0 14px, #fff 14px 28px); }
+.sec-title { text-align: center; }
+.sec-title .eyebrow { font: 700 24px var(--f-hand); color: var(--red); }
+.sec-title h2 { margin-top: 4px; font: 400 clamp(32px, 5vw, 50px)/1.15 var(--f-display); letter-spacing: -.02em; text-wrap: balance; }
+.sec-title p { margin: 12px auto 0; max-width: 34em; color: var(--ink-soft); text-wrap: pretty; }
+.cards { margin-top: 46px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.card { position: relative; background: #fff; border-radius: 28px; padding: 30px 26px 28px; box-shadow: 0 6px 0 #f0d9ba, 0 24px 40px -22px rgba(120, 60, 30, .35); border: 2px solid #f6e5cc; transition: transform .25s; }
+.card:nth-child(1) { transform: rotate(-1.2deg); } .card:nth-child(2) { transform: rotate(.9deg); } .card:nth-child(3) { transform: rotate(-.7deg); }
+.card:hover { transform: rotate(0) translateY(-6px); }
+.card .ico { width: 64px; height: 64px; border-radius: 20px; display: grid; place-items: center; font-size: 32px; margin-bottom: 16px; }
+.card:nth-child(1) .ico { background: #ffe1e1; } .card:nth-child(2) .ico { background: #d8f2e4; } .card:nth-child(3) .ico { background: #fff0c7; }
+.card h3 { font: 700 22px/1.3 var(--f-body); }
+.card p { margin-top: 8px; color: var(--ink-soft); font-size: 16px; text-wrap: pretty; }
+.card::after { content: ""; position: absolute; top: -9px; left: 50%; width: 54px; height: 20px; transform: translateX(-50%) rotate(-3deg); background: rgba(244, 196, 83, .75); border-radius: 3px; }
+
+.shapes { margin-top: 70px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 36px; align-items: center; }
+.shapes h2 { font: 400 clamp(28px, 4vw, 40px)/1.2 var(--f-display); letter-spacing: -.02em; text-wrap: balance; }
+.shapes h2 em { font-style: normal; color: var(--red); }
+.shapes p { margin-top: 12px; color: var(--ink-soft); text-wrap: pretty; }
+.shape-row { display: flex; gap: 14px; margin-top: 22px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; background: #fff; border: 2px solid #f0d9ba; font-weight: 700; }
+.tagdemo { justify-self: center; width: min(100%, 420px); position: relative; background: #fff; border-radius: 10px 30px 30px 30px; padding: 30px 28px 26px 70px; box-shadow: 0 6px 0 #f0d9ba, 0 26px 40px -22px rgba(120, 60, 30, .4); border: 2px solid #f0d9ba; transform: rotate(2deg); }
+.tagdemo::before { content: ""; position: absolute; left: 22px; top: 34px; width: 20px; height: 20px; border-radius: 50%; background: var(--cream); box-shadow: inset 0 2px 3px rgba(0, 0, 0, .25), 0 0 0 3px #f6e5cc; }
+.tagdemo::after { content: ""; position: absolute; left: 30px; top: -64px; width: 3px; height: 100px; background: var(--red); transform: rotate(-12deg); transform-origin: 50% 100%; border-radius: 3px; }
+.tagdemo small { font: 700 13px var(--f-body); letter-spacing: .1em; color: var(--ink-soft); }
+.tagdemo .size { font: 700 46px/1.1 "Noto Sans KR", monospace; letter-spacing: -.03em; margin-top: 4px; }
+.tagdemo .size i { font-style: normal; color: var(--red); margin: 0 6px; }
+.tagdemo .size span { font: 700 18px var(--f-body); color: var(--ink-soft); margin-left: 4px; }
+.tagdemo .ok { display: inline-block; margin-top: 12px; padding: 5px 14px; border-radius: 999px; background: #d8f2e4; color: #1d7a4b; font-weight: 700; }
+.tagdemo .hand { margin-top: 12px; font: 700 22px var(--f-hand); color: var(--red); }
+
+.steps { margin: 80px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; counter-reset: s; }
+.steps li { position: relative; text-align: center; padding: 8px 14px 0; }
+.steps li::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 62px; height: 62px; margin: 0 auto 14px; border-radius: 50%; background: var(--red); color: #fff; font: 400 30px var(--f-display); box-shadow: 0 5px 0 var(--red-deep); }
+.steps li:nth-child(2)::before { background: #2c8a62; box-shadow: 0 5px 0 #1b6648; } .steps li:nth-child(3)::before { background: #e0a21f; box-shadow: 0 5px 0 #b27e12; }
+.steps h3 { font: 700 20px var(--f-body); }
+.steps p { margin-top: 6px; color: var(--ink-soft); font-size: 16px; }
+.steps li:not(:last-child)::after { content: ""; position: absolute; top: 31px; left: calc(50% + 46px); width: calc(100% - 92px + 22px); border-top: 3px dotted #e5c9a4; }
+
+/* ───── 마지막 호출 ───── */
+.final { position: relative; background: linear-gradient(180deg, #0f4a39 0%, #0a2b22 100%); text-align: center; padding-block: 110px 120px; overflow: hidden; }
+.final::before { content: ""; position: absolute; left: 0; right: 0; top: -1px; line-height: 0; height: 60px; background: var(--cream); clip-path: ellipse(70% 100% at 50% 0%); }
+.final h2 { position: relative; font: 400 clamp(34px, 6vw, 64px)/1.15 var(--f-display); letter-spacing: -.02em; text-wrap: balance; }
+.final h2 em { font-style: normal; color: var(--gold); }
+.final p { position: relative; margin: 14px auto 32px; max-width: 28em; color: #dcebe1; text-wrap: pretty; }
+.final .row { position: relative; }
+.trees { position: absolute; inset: auto 0 0 0; display: flex; justify-content: space-between; padding-inline: 4vw; pointer-events: none; opacity: .5; font-size: clamp(34px, 6vw, 70px); line-height: 1; }
+footer { background: #071f19; color: #9fc4b3; text-align: center; padding: 30px 20px calc(34px + env(safe-area-inset-bottom, 0px)); font-size: 15px; }
+footer b { color: var(--gold); font-family: var(--f-hand); font-size: 22px; }
+
+/* ───── 좁은 화면 ───── */
+@media (max-width: 860px) {
+  .hero-in { grid-template-columns: minmax(0, 1fr); padding-block: 18px 70px; }
+  .scene { order: -1; width: min(86%, 400px); }
+  .cards, .steps { grid-template-columns: minmax(0, 1fr); }
+  .card, .card:nth-child(n) { transform: none; }
+  .shapes { grid-template-columns: minmax(0, 1fr); }
+  .steps li:not(:last-child)::after { display: none; }
+  .steps { gap: 34px; }
+}
+@media (max-width: 480px) {
+  .btn { font-size: 20px; padding: 17px 28px; }
+  .logo b { font-size: 26px; }
+  .tagdemo { padding-left: 62px; } .tagdemo .size { font-size: 38px; }
+  .nav .pill.small { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <canvas id="snow" aria-hidden="true"></canvas>
+  <div class="garland" id="garland" aria-hidden="true"></div>
+
+  <div class="top">
+    <div class="wrap nav">
+      <a class="logo" href="./" aria-label="싹둑">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="2" y="2" width="44" height="44" rx="12" fill="#14463a" stroke="#f4c453" stroke-width="2"/><path d="M10 22h28v18H10z" fill="#d63a30"/><rect x="21" y="22" width="6" height="18" fill="#f4c453"/><path d="M24 22c-8-11-17-4-11 0zM24 22c8-11 17-4 11 0z" fill="none" stroke="#f4c453" stroke-width="3" stroke-linejoin="round"/></svg>
+        <b>싹둑</b>
+      </a>
+      <a class="pill small" href="app/">앱 바로 열기</a>
+    </div>
+  </div>
+
+  <div class="wrap hero-in">
+    <div>
+      <span class="kicker">🎄 크리스마스 선물 포장 도우미</span>
+      <h1>선물 포장지,<br>딱 맞게 <em>싹둑!</em></h1>
+      <p class="lead">상자, 통, 병의 크기만 넣어 보세요. 필요한 포장지 크기와 자르는 선을 알려 주고, 포장되는 모습까지 미리 보여 드려요. 종이가 모자라서 울상 짓는 일은 이제 없어요.</p>
+      <div class="cta-row">
+        <a class="btn" href="app/" id="cta1"><span class="gift" aria-hidden="true">🎁</span>싹둑 시작하기</a>
+        <a class="link-soft" href="#how">어떻게 쓰나요?</a>
+      </div>
+      <ul class="perks"><li>무료</li><li>설치 없음</li><li>휴대폰에서도 OK</li></ul>
+      <div class="dday" aria-live="polite"><span>크리스마스까지</span><b id="dday">D-?</b></div>
+    </div>
+
+    <div class="scene" aria-hidden="true">
+      <svg viewBox="0 0 400 360">
+        <defs>
+          <pattern id="dots" width="26" height="26" patternUnits="userSpaceOnUse"><rect width="26" height="26" fill="#d63a30"/><circle cx="6" cy="6" r="3" fill="#fff6e4"/><circle cx="19" cy="19" r="3" fill="#fff6e4"/><path d="M19 3l1.2 2.6 2.8.4-2 2 .5 2.8-2.5-1.3-2.5 1.3.5-2.8-2-2 2.8-.4z" fill="#f4c453" transform="translate(-3 -1) scale(.8)"/></pattern>
+          <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe08a"/><stop offset="1" stop-color="#e6a928"/></linearGradient>
+        </defs>
+        <ellipse cx="200" cy="322" rx="150" ry="16" fill="#000" opacity=".25"/>
+        <g class="float">
+          <rect x="70" y="160" width="250" height="150" rx="10" fill="url(#dots)"/>
+          <rect x="70" y="160" width="250" height="150" rx="10" fill="none" stroke="#a82a22" stroke-width="3"/>
+          <rect x="58" y="128" width="274" height="46" rx="10" fill="#e84a3d"/>
+          <rect x="58" y="128" width="274" height="46" rx="10" fill="none" stroke="#a82a22" stroke-width="3"/>
+          <rect x="170" y="128" width="50" height="182" fill="url(#gold)"/>
+          <rect x="58" y="146" width="274" height="12" fill="url(#gold)" opacity=".0"/>
+          <g class="bow">
+            <path d="M195 128C150 70 96 84 118 118c14 22 60 12 77 10z" fill="url(#gold)" stroke="#c98a14" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M195 128c45-58 99-44 77-10-14 22-60 12-77 10z" fill="url(#gold)" stroke="#c98a14" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M195 128l-30 44M195 128l30 44" stroke="#c98a14" stroke-width="12" stroke-linecap="round"/>
+            <ellipse cx="195" cy="126" rx="19" ry="15" fill="#ffd25e" stroke="#c98a14" stroke-width="3"/>
+            <circle cx="134" cy="104" r="4" fill="#fff" opacity=".7"/>
+          </g>
+          <g fill="#fff6e4"><circle cx="105" cy="228" r="0"/></g>
+          <path d="M96 250c0 0 6 8 14 0M262 250c0 0 6 8 14 0" stroke="#7a1c15" stroke-width="4" stroke-linecap="round" fill="none"/>
+          <circle cx="92" cy="244" r="9" fill="#ff9fb3" opacity=".75"/><circle cx="294" cy="244" r="9" fill="#ff9fb3" opacity=".75"/>
+          <circle cx="112" cy="232" r="5" fill="#2a1a17"/><circle cx="278" cy="232" r="5" fill="#2a1a17"/>
+          <circle cx="114" cy="230" r="1.6" fill="#fff"/><circle cx="280" cy="230" r="1.6" fill="#fff"/>
+        </g>
+        <!-- 가위 -->
+        <g transform="translate(340 292) rotate(-32)">
+          <g class="snip">
+            <g class="blade-a"><path d="M0 -3 L72 0 L0 3 Z" fill="#eef3f6" stroke="#8d9aa3" stroke-width="1.5" stroke-linejoin="round"/><path d="M0 0 L-26 0" stroke="#f4c453" stroke-width="7" stroke-linecap="round"/><circle cx="-38" cy="0" r="13" fill="none" stroke="#f4c453" stroke-width="7"/></g>
+            <g class="blade-b"><path d="M0 -3 L72 0 L0 3 Z" fill="#eef3f6" stroke="#8d9aa3" stroke-width="1.5" stroke-linejoin="round"/><path d="M0 0 L-26 0" stroke="#f4c453" stroke-width="7" stroke-linecap="round"/><circle cx="-38" cy="0" r="13" fill="none" stroke="#f4c453" stroke-width="7"/></g>
+            <circle r="4" fill="#5d6a72"/>
+          </g>
+        </g>
+        <path class="snipbit" d="M268 300l20 -4 3 8z" fill="#d63a30"/>
+        <path class="snipbit" style="animation-delay:.9s" d="M258 304l16 -2 2 6z" fill="#fff6e4"/>
+        <!-- 반짝이 -->
+        <path class="spark" d="M44 96l5 14 14 5-14 5-5 14-5-14-14-5 14-5z" fill="#fff6a8"/>
+        <path class="spark" style="animation-delay:.7s" d="M350 70l4 11 11 4-11 4-4 11-4-11-11-4 11-4z" fill="#ffd0dc"/>
+        <path class="spark" style="animation-delay:1.3s" d="M330 190l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#fff6a8"/>
+        <path class="spark" style="animation-delay:1.8s" d="M40 250l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#bfe8d4"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="hills" aria-hidden="true">
+    <svg viewBox="0 0 1440 90" preserveAspectRatio="none"><path d="M0 50C160 10 300 8 480 40s330 40 500 6 300-30 460 6V90H0z" fill="#fff6e4"/></svg>
+  </div>
+</div>
+
+<main>
+  <section class="paper" id="how">
+    <div class="wrap">
+      <div class="sec-title">
+        <div class="eyebrow">산타도 쓰고 싶어 할 걸요</div>
+        <h2>이런 걸 도와줘요</h2>
+        <p>선물 하나하나가 소중하니까, 종이는 딱 필요한 만큼만 쓰고 포장은 예쁘게 끝내요.</p>
+      </div>
+
+      <div class="cards">
+        <article class="card"><div class="ico" aria-hidden="true">✂️</div><h3>자를 선을 그려 줘요</h3><p>뒷면 격자 위에 재단선과 접는 선을 그려 줘요. 가위가 선을 따라 싹둑 지나가는 모습도 볼 수 있어요.</p></article>
+        <article class="card"><div class="ico" aria-hidden="true">🎁</div><h3>포장되는 모습을 미리 봐요</h3><p>종이가 접히고 테이프가 붙고 리본 매듭이 뿅! 3D 애니메이션을 돌려 보며 순서를 익혀요.</p></article>
+        <article class="card"><div class="ico" aria-hidden="true">😱</div><h3>모자라면 미리 알려 줘요</h3><p>롤 폭이나 낱장 크기를 넣으면 몇 cm 모자란지, 어느 방향으로 감싸면 되는지 알려 드려요.</p></article>
+      </div>
+
+      <div class="shapes">
+        <div>
+          <h2>상자도, 통도, <em>병</em>도 OK</h2>
+          <p>신발 상자, 케이크 상자, 머그컵, 텀블러, 와인병까지. 자주 쓰는 크기는 버튼 한 번으로 불러올 수 있어요.</p>
+          <div class="shape-row"><span class="chip">📦 상자</span><span class="chip">🕯️ 원통</span><span class="chip">🍷 병</span></div>
+        </div>
+        <div class="tagdemo" aria-label="결과 화면 예시">
+          <small>필요한 포장지</small>
+          <div class="size">67<i>×</i>47<span>cm</span></div>
+          <span class="ok">✓ 딱 맞아요</span>
+          <div class="hand">리본은 약 140cm 있으면 돼요!</div>
+        </div>
+      </div>
+
+      <ol class="steps">
+        <li><h3>크기를 넣어요</h3><p>모양을 고르고 가로·세로·높이를 입력해요.</p></li>
+        <li><h3>종이를 확인해요</h3><p>필요한 크기와 자르는 선, 남는 종이를 봐요.</p></li>
+        <li><h3>포장을 미리 봐요</h3><p>애니메이션으로 접는 순서를 따라 해요.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <h2>이번 크리스마스,<br>선물은 <em>딱 맞게</em> 포장해요</h2>
+      <p>크기만 넣으면 끝이에요. 올해는 종이도 아끼고, 포장도 예쁘게!</p>
+      <div class="row"><a class="btn big" href="app/" id="cta2"><span class="gift" aria-hidden="true">🎁</span>싹둑 시작하기</a></div>
+    </div>
+    <div class="trees" aria-hidden="true"><span>🎄</span><span>⛄</span><span>🎄</span><span>🦌</span><span>🎄</span><span>⛄</span><span>🎄</span></div>
+  </section>
+</main>
+
+<footer><b>Merry Christmas!</b><br>모두의 선물이 예쁘게 포장되기를 바라며. 🎅</footer>
+
+<script>
+(function () {
+  'use strict';
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* 크리스마스 D-day */
+  var now = new Date(), y = now.getFullYear();
+  var x = new Date(y, 11, 25), today = new Date(y, now.getMonth(), now.getDate());
+  if (today > x) x = new Date(y + 1, 11, 25);
+  var d = Math.round((x - today) / 86400000);
+  document.getElementById('dday').textContent = d === 0 ? '오늘이에요! 🎉' : (d === 1 ? '내일이에요! 🎄' : 'D-' + d);
+
+  /* 전구 줄 */
+  var g = document.getElementById('garland'), colors = ['#ff4b4b', '#ffc93c', '#47e08a', '#52a8ff', '#ff7ad0'];
+  function bulbs() {
+    g.innerHTML = '';
+    var w = g.clientWidth, n = Math.ceil(w / 46);
+    for (var i = 0; i <= n; i++) {
+      var t = i / n, b = document.createElement('i');
+      b.style.left = (t * 100) + '%';
+      b.style.top = (Math.sin(t * Math.PI) * 34 - 6 + 20) + 'px';
+      b.style.marginLeft = '-7px';
+      b.style.setProperty('--c', colors[i % colors.length]);
+      b.style.animationDelay = (i % 5) * .45 + 's';
+      g.appendChild(b);
+    }
+  }
+  bulbs(); window.addEventListener('resize', bulbs);
+
+  /* 눈 */
+  var cv = document.getElementById('snow'), ctx = cv.getContext('2d'), flakes = [], W = 0, H = 0, dpr = Math.min(2, window.devicePixelRatio || 1), raf = 0;
+  function size() {
+    var r = cv.parentElement.getBoundingClientRect();
+    W = r.width; H = r.height; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var n = Math.round(Math.min(120, Math.max(40, W / 12)));
+    while (flakes.length < n) flakes.push({ x: Math.random() * W, y: Math.random() * H, r: 1 + Math.random() * 3.2, v: 18 + Math.random() * 40, p: Math.random() * 6.28, a: .5 + Math.random() * .5 });
+    flakes.length = n;
+  }
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < flakes.length; i++) {
+      var f = flakes[i];
+      f.y += f.v * .016; f.x += Math.sin(t / 1400 + f.p) * .35;
+      if (f.y > H + 6) { f.y = -6; f.x = Math.random() * W; }
+      ctx.globalAlpha = f.a; ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.283); ctx.fill();
+    }
+    raf = requestAnimationFrame(draw);
+  }
+  size(); window.addEventListener('resize', size);
+  if (reduce) { draw(0); cancelAnimationFrame(raf); } else { raf = requestAnimationFrame(draw); }
+  document.addEventListener('visibilitychange', function () {
+    if (reduce) return;
+    if (document.hidden) cancelAnimationFrame(raf); else raf = requestAnimationFrame(draw);
+  });
+})();
+</script>
+</body>
+</html>
