@@ -77,8 +77,8 @@
     $('photo-step').textContent = msg;
     $('photo-skip').hidden = S.photoIdx === 0;
     $('photo-actions').hidden = S.photoIdx === 0;
-    $('photo-canvas-wrap').hidden = true;
-    $('photo-file').value = '';
+    $('photo-canvas-wrap').hidden = true; S.img = null; S.H = null;
+    $('photo-file').value = ''; updateList();
   }
 
   function loadFile(file) {
@@ -106,11 +106,32 @@
     var st = S.steps[S.stepIdx], n = S.pts.length, t;
     if (st.type === 'cal') {
       var hints = ['A4의 한 모서리', 'A4의 다음 모서리 (짧은 변 21cm 방향)', 'A4의 세 번째 모서리 (시계 방향)', 'A4의 마지막 모서리'];
-      t = '먼저 A4 용지 모서리 4곳을 눌러요 (' + (n + 1) + '/4): ' + hints[n] + '. 첫 두 점이 짧은 변이어야 해요.';
+      t = '① 기준 만들기: A4 용지 모서리 4곳을 눌러요 (' + (n + 1) + '/4) — ' + hints[n] + '. 4곳을 다 누르면 A4 크기를 기준으로 삼아요(이 단계에서는 길이가 나오지 않아요).';
     } else {
       t = '“' + st.field.label + '”의 양 끝 두 점을 눌러요 (' + (n + 1) + '/2). ' + (S.plan[S.photoIdx].plane === 'ground' ? '선물이 바닥에 닿은 가장자리를 따라 눌러요.' : 'A4와 같은 면에서 위아래 끝을 눌러요.');
     }
+    if (S.flash) { t = S.flash + ' ' + t; S.flash = ''; }
     $('photo-step').textContent = t;
+    updateList();
+  }
+
+  function updateList() {
+    var ul = $('photo-list'); if (!ul) return;
+    ul.innerHTML = '';
+    var ph = S.plan[S.photoIdx]; if (!ph || !S.img) return;
+    var calOk = !!S.H;
+    var li0 = document.createElement('li'); li0.className = calOk ? 'ok' : 'now';
+    li0.textContent = (calOk ? '✓ ' : '• ') + 'A4 기준 ' + (calOk ? '완료' : '(4점)');
+    ul.appendChild(li0);
+    ph.fields.forEach(function (f, i) {
+      var li = document.createElement('li'), v = S.values[f.k];
+      var cur = S.steps[S.stepIdx] && S.steps[S.stepIdx].field === f;
+      li.className = v != null ? 'ok' : (cur ? 'now' : '');
+      li.textContent = (v != null ? '✓ ' : '• ') + f.label + ' ' + (v != null ? v.toFixed(1) + ' cm' : '(2점)');
+      ul.appendChild(li);
+    });
+    var any = ph.fields.some(function (f) { return S.values[f.k] != null; });
+    $('photo-finish').hidden = !any;
   }
 
   function draw() {
@@ -158,9 +179,11 @@
         var H = homography(S.pts, [[0, 0], [A4W, 0], [A4W, A4H], [0, A4H]]);
         if (!H) { S.pts = []; $('photo-step').textContent = 'A4 모서리를 다시 눌러 주세요(점이 한 줄에 놓이면 안 돼요).'; draw(); return; }
         S.H = H; S.done.push({ type: 'cal', pts: S.pts.slice() });
+        S.flash = '✓ A4 기준이 잡혔어요!';
       } else {
         var cm = dist(S.H, S.pts[0], S.pts[1]);
         S.values[st.field.k] = Math.round(cm * 10) / 10;
+        S.flash = '✓ ' + st.field.label + ' ' + (Math.round(cm * 10) / 10).toFixed(1) + ' cm로 쟀어요.';
         S.done.push({ type: 'm', field: st.field, pts: S.pts.slice(), cm: cm });
       }
       S.pts = []; S.stepIdx++;
@@ -186,8 +209,22 @@
       host.appendChild(row);
     });
     $('photo-result').hidden = false;
-    $('photo-actions').hidden = true;
     var rs = $('photo-result'); if (rs.scrollIntoView) rs.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function resetPoints() {
+    if (!S || !S.img) return;
+    var ph = S.plan[S.photoIdx];
+    ph.fields.forEach(function (f) { delete S.values[f.k]; });
+    S.stepIdx = 0; S.pts = []; S.H = null; S.done = []; S.flash = '모든 점을 지웠어요. 처음부터 다시 눌러 주세요.';
+    $('photo-result').hidden = true;
+    draw(); say();
+  }
+
+  function earlyFinish() {
+    if (!S) return;
+    S.done = []; S.pts = []; S.photoIdx = S.plan.length;
+    finish();
   }
 
   function undo() {
@@ -204,6 +241,8 @@
     $('photo-file').addEventListener('change', function () { loadFile(this.files && this.files[0]); });
     $('photo-canvas').addEventListener('click', onTap);
     $('photo-undo').addEventListener('click', undo);
+    $('photo-reset').addEventListener('click', resetPoints);
+    $('photo-finish').addEventListener('click', earlyFinish);
     $('photo-skip').addEventListener('click', function () { if (!S) return; S.photoIdx = S.plan.length; S.done = []; finish(); });
     $('photo-close').addEventListener('click', close);
     $('photo-overlay').addEventListener('click', function (e) { if (e.target === this) close(); });
