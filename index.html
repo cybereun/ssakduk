@@ -52,11 +52,11 @@ a { color: inherit; }
 .pill.small:hover { background: rgba(255, 246, 228, .22); transform: translateY(-2px); }
 
 /* ───── 히어로 ───── */
-.hero { position: relative; background: radial-gradient(1200px 600px at 75% 30%, #1e6a53 0%, transparent 60%), linear-gradient(180deg, #0c3a2d 0%, #0a2b22 100%); overflow: hidden; }
+.hero { position: relative; min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; background: radial-gradient(1200px 600px at 75% 30%, #1e6a53 0%, transparent 60%), linear-gradient(180deg, #0c3a2d 0%, #0a2b22 100%); overflow: hidden; }
 #snow { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
-.hero-in { position: relative; z-index: 3; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 20px; align-items: center; padding-block: 30px 90px; }
+.hero-in { flex: 1; align-content: center; position: relative; z-index: 3; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 20px; align-items: center; padding-block: 30px 90px; }
 .kicker { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: rgba(255, 194, 207, .16); color: var(--pink); font: 700 20px/1.2 var(--f-hand); border: 1.5px dashed rgba(255, 194, 207, .55); }
-h1 { margin-top: 18px; font: 400 clamp(44px, 8vw, 92px)/1.04 var(--f-display); letter-spacing: -.03em; text-wrap: balance; text-shadow: 0 4px 0 rgba(0, 0, 0, .22); }
+h1 { margin-top: 18px; font: 400 clamp(40px, 6.6vw, 92px)/1.04 var(--f-display); letter-spacing: -.03em; text-wrap: balance; text-shadow: 0 4px 0 rgba(0, 0, 0, .22); }
 h1 em { font-style: normal; color: var(--gold); display: inline-block; position: relative; }
 h1 em::after { content: ""; position: absolute; left: -2%; right: -2%; bottom: -.04em; height: .16em; background: var(--red); border-radius: 99px; transform: rotate(-1.5deg); z-index: -1; }
 .lead { margin-top: 22px; font-size: clamp(17px, 2.2vw, 21px); color: #e8f3ea; max-width: 30em; text-wrap: pretty; }
@@ -92,6 +92,11 @@ h1 em::after { content: ""; position: absolute; left: -2%; right: -2%; bottom: -
 .snipbit { animation: fall 2.4s ease-in infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes fall { 0% { transform: translate(0, -6px) rotate(0); opacity: 0 } 15% { opacity: 1 } 100% { transform: translate(-26px, 74px) rotate(190deg); opacity: 0 } }
 
+/* 아래로 안내 */
+.more { position: absolute; z-index: 4; left: 50%; bottom: 74px; transform: translateX(-50%); display: grid; justify-items: center; gap: 2px; color: #cfe6d8; text-decoration: none; font: 700 18px/1 var(--f-hand); opacity: .9; }
+.more span { font-size: 20px; animation: nudge 1.6s ease-in-out infinite; }
+@keyframes nudge { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(7px) } }
+@media (max-width: 700px) { .more { display: none; } }
 /* 눈 쌓인 언덕 */
 .hills { position: absolute; left: 0; right: 0; bottom: -1px; z-index: 2; line-height: 0; }
 .hills svg { width: 100%; height: 90px; display: block; }
@@ -150,13 +155,20 @@ footer b { color: var(--gold); font-family: var(--f-hand); font-size: 22px; }
 
 /* ───── 좁은 화면 ───── */
 @media (max-width: 860px) {
-  .hero-in { grid-template-columns: minmax(0, 1fr); padding-block: 18px 70px; }
-  .scene { order: -1; width: min(86%, 400px); }
   .cards, .steps { grid-template-columns: minmax(0, 1fr); }
   .card, .card:nth-child(n) { transform: none; }
   .shapes { grid-template-columns: minmax(0, 1fr); }
   .steps li:not(:last-child)::after { display: none; }
   .steps { gap: 34px; }
+}
+@media (max-width: 700px) {
+  .hero-in { grid-template-columns: minmax(0, 1fr); padding-block: 4px 64px; gap: 6px; }
+  .scene { order: -1; width: min(66%, 40svh); }
+  h1 { margin-top: 12px; font-size: clamp(38px, 11vw, 60px); }
+  .lead { margin-top: 12px; font-size: 16px; }
+  .cta-row { margin-top: 18px; }
+  .perks { display: none; }
+  .dday { margin-top: 16px; padding: 6px 14px; } .dday b { font-size: 28px; }
 }
 @media (max-width: 480px) {
   .btn { font-size: 20px; padding: 17px 28px; }
@@ -241,6 +253,8 @@ footer b { color: var(--gold); font-family: var(--f-hand); font-size: 22px; }
       </svg>
     </div>
   </div>
+
+  <a class="more" href="#how" aria-label="아래로 내려 보기">아래로<span aria-hidden="true">⌄</span></a>
 
   <div class="hills" aria-hidden="true">
     <svg viewBox="0 0 1440 90" preserveAspectRatio="none"><path d="M0 50C160 10 300 8 480 40s330 40 500 6 300-30 460 6V90H0z" fill="#fff6e4"/></svg>
@@ -353,5 +367,6 @@ footer b { color: var(--gold); font-family: var(--f-hand); font-size: 22px; }
   });
 })();
 </script>
+<script src="bgm.js" defer></script>
 </body>
 </html>
