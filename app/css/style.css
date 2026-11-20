@@ -220,7 +220,7 @@ input[type="range"] { width: 100%; accent-color: var(--red); height: 24px; margi
 
 /* ───── 좁은 화면 ───── */
 @media (max-width: 980px) {
-  .app { display: flex; flex-direction: column; gap: 14px; }
+  .app { display: flex; flex-direction: column; align-items: stretch; gap: 14px; }
   .controls, .workspace { display: contents; }
   #result { order: 1; }
   #c-shape { order: 2; }
