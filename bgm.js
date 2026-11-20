@@ -145,7 +145,8 @@
     '.bgm .eq i:nth-child(2){animation-delay:.25s}.bgm .eq i:nth-child(3){animation-delay:.5s}' +
     '@keyframes bgmeq{0%,100%{height:4px}50%{height:14px}}' +
     '@media (prefers-reduced-motion:reduce){.bgm .eq i{animation:none;height:9px}}' +
-    '@media (max-width:480px){.bgm{padding:10px 13px}.bgm .txt{display:none}}';
+    '.bgm.inline{position:static;right:auto;bottom:auto;padding:11px 18px 11px 15px;font-size:15px}' +
+    '@media (max-width:480px){.bgm:not(.inline){padding:10px 13px}.bgm:not(.inline) .txt{display:none}}';
   document.head.appendChild(css);
 
   var btn = document.createElement('button');
@@ -165,7 +166,11 @@
     if (on) start(); else stop();
   });
 
-  function mount() { document.body.appendChild(btn); render(); }
+  function mount() {
+    var slot = document.querySelector('[data-bgm-slot]');
+    if (slot) { btn.classList.add('inline'); slot.appendChild(btn); } else document.body.appendChild(btn);
+    render();
+  }
   if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
 
   /* 지난번에 켜 두었다면, 브라우저 규칙상 첫 클릭·터치 때 이어서 재생 */
