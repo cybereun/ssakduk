@@ -2,7 +2,7 @@
 
 [![Developer](https://img.shields.io/badge/Developer-cybereun-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/cybereun)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-싹둑_열기-d63a30?style=for-the-badge)](https://cybereun.github.io/ssakduk/)
-[![Copyright](https://img.shields.io/badge/%C2%A9_2026-cybereun-0f3b2e?style=for-the-badge)](#저작권--개발자)
+[![License: MIT](https://img.shields.io/badge/License-MIT-0f3b2e?style=for-the-badge)](LICENSE)
 
 선물 상자, 원통, 병의 크기를 넣으면 필요한 포장지 크기와 재단선을 보여 주고, 종이가 감기는 모습을 3D 애니메이션으로 미리 보여 주는 웹앱입니다. 종이를 모자라게 자르는 사고를 미리 막아 줍니다.
 
@@ -61,13 +61,13 @@
 | 저장소 | https://github.com/cybereun/ssakduk |
 | 배포 주소 | https://cybereun.github.io/ssakduk/ |
 
-### 저작권
-© 2026 cybereun. All rights reserved.
+### 저작권과 라이선스
+© 2026 cybereun. [MIT License](LICENSE)로 공개합니다.
 
-이 저장소의 코드, 디자인, 일러스트, 문구에 대한 저작권은 개발자에게 있습니다. 별도의 허락 없이 복제, 수정, 재배포, 상업적 이용을 할 수 없습니다. 사용이나 협업을 원하시면 GitHub 프로필의 링크로 연락해 주세요.
+누구나 자유롭게 사용, 복사, 수정, 배포, 상업적 이용을 할 수 있어요. 다만 **복사본이나 수정본을 배포할 때는 위 저작권 표시(© 2026 cybereun)와 MIT 라이선스 전문을 그대로 남겨야 합니다.** 수정해서 배포한다면 원작자(cybereun)와 이 저장소 링크를 함께 밝혀 주세요. 소프트웨어는 어떤 보증도 없이 "있는 그대로" 제공됩니다.
 
 ### 사용한 오픈소스 · 글꼴 · 음악
-각 구성요소는 아래의 자체 라이선스를 따르며, 위 저작권 문구는 이들에 적용되지 않습니다.
+각 구성요소는 아래의 자체 라이선스를 따르며, 위 MIT 라이선스는 이들에 적용되지 않습니다.
 
 | 구성요소 | 라이선스 | 비고 |
 |---|---|---|
