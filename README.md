@@ -1,5 +1,9 @@
 # 싹둑 · 포장지 재단 계산기
 
+[![Developer](https://img.shields.io/badge/Developer-cybereun-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/cybereun)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-싹둑_열기-d63a30?style=for-the-badge)](https://cybereun.github.io/ssakduk/)
+[![Copyright](https://img.shields.io/badge/%C2%A9_2026-cybereun-0f3b2e?style=for-the-badge)](#저작권--개발자)
+
 선물 상자, 원통, 병의 크기를 넣으면 필요한 포장지 크기와 재단선을 보여 주고, 종이가 감기는 모습을 3D 애니메이션으로 미리 보여 주는 웹앱입니다. 종이를 모자라게 자르는 사고를 미리 막아 줍니다.
 
 ## 실행
@@ -49,6 +53,25 @@
 - 카메라로 상자 치수 재기
 
 ## 저작권 · 개발자
-- © 2026 cybereun. All rights reserved.
-- 개발자: [cybereun](https://github.com/cybereun)
-- 사용한 것: Three.js r149(MIT), Google Fonts의 Black Han Sans · Gaegu · Noto Sans KR · JetBrains Mono(SIL OFL 1.1), 「고요한 밤」(1818, 저작권 만료)을 브라우저에서 직접 합성한 BGM
+
+### 개발자
+| | |
+|---|---|
+| 개발자 | [cybereun](https://github.com/cybereun) |
+| 저장소 | https://github.com/cybereun/ssakduk |
+| 배포 주소 | https://cybereun.github.io/ssakduk/ |
+| 제작 방식 | Claude Code와 대화하며 개발 |
+
+### 저작권
+© 2026 cybereun. All rights reserved.
+
+이 저장소의 코드, 디자인, 일러스트, 문구에 대한 저작권은 개발자에게 있습니다. 별도의 허락 없이 복제, 수정, 재배포, 상업적 이용을 할 수 없습니다. 사용이나 협업을 원하시면 GitHub 프로필의 링크로 연락해 주세요.
+
+### 사용한 오픈소스 · 글꼴 · 음악
+각 구성요소는 아래의 자체 라이선스를 따르며, 위 저작권 문구는 이들에 적용되지 않습니다.
+
+| 구성요소 | 라이선스 | 비고 |
+|---|---|---|
+| [Three.js](https://threejs.org/) r149 | MIT | © 2010-2023 three.js authors. `app/vendor/three.min.js` |
+| Black Han Sans, Gaegu, Noto Sans KR, JetBrains Mono | SIL Open Font License 1.1 | Google Fonts로 불러옴 |
+| 「고요한 밤」 (프란츠 크사버 그루버, 1818) | 저작권 만료(퍼블릭 도메인) | 음원 파일 없이 브라우저에서 직접 합성해 연주(`bgm.js`) |
