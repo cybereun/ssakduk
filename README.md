@@ -60,7 +60,6 @@
 | 개발자 | [cybereun](https://github.com/cybereun) |
 | 저장소 | https://github.com/cybereun/ssakduk |
 | 배포 주소 | https://cybereun.github.io/ssakduk/ |
-| 제작 방식 | Claude Code와 대화하며 개발 |
 
 ### 저작권
 © 2026 cybereun. All rights reserved.
