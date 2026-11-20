@@ -585,6 +585,359 @@
     };
   }
 
+  /* ───────── 삼각기둥 · 대각선 · 보자기 (조각을 잘라 낸 접기 사슬) ───────── */
+  function clipHalf(poly, nx, nz, c) {            // nx*x + nz*z <= c 만 남긴다
+    var out = [], n = poly.length;
+    for (var i = 0; i < n; i++) {
+      var a = poly[i], b = poly[(i + 1) % n];
+      var da = nx * a[0] + nz * a[1] - c, db = nx * b[0] + nz * b[1] - c;
+      if (da <= 0) out.push(a);
+      if ((da < 0 && db > 0) || (da > 0 && db < 0)) {
+        var t = da / (da - db);
+        out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+      }
+    }
+    return out;
+  }
+
+  function panelP(parent, rc, pv, layer, getMats, clip, uvf) {
+    var poly = [[rc.x0, rc.z0], [rc.x1, rc.z0], [rc.x1, rc.z1], [rc.x0, rc.z1]];
+    if (clip) poly = clip(poly);
+    if (!poly || poly.length < 3) return null;
+    var area = 0, i;
+    for (i = 0; i < poly.length; i++) { var u = poly[i], v = poly[(i + 1) % poly.length]; area += u[0] * v[1] - v[0] * u[1]; }
+    if (Math.abs(area) < 1e-3) return null;
+    // 위(+y)에서 봤을 때 앞면이 되도록 감는 방향을 맞춘다
+    var v0 = poly[0], v1 = poly[1], v2 = poly[2];
+    if (((v1[1] - v0[1]) * (v2[0] - v0[0]) - (v1[0] - v0[0]) * (v2[1] - v0[1])) < 0) poly = poly.slice().reverse();
+    var n = poly.length, pos = new Float32Array(n * 3), uv = new Float32Array(n * 2), idx = [];
+    for (i = 0; i < n; i++) {
+      pos[i * 3] = poly[i][0] - pv.x; pos[i * 3 + 1] = 0; pos[i * 3 + 2] = poly[i][1] - pv.z;
+      var uu = uvf ? uvf(poly[i][0], poly[i][1]) : [poly[i][0] / TILE_CM, poly[i][1] / TILE_CM];
+      uv[i * 2] = uu[0]; uv[i * 2 + 1] = uu[1];
+      if (i >= 2) idx.push(0, i - 1, i);
+    }
+    var geo = new T.BufferGeometry();
+    geo.setAttribute('position', new T.BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new T.BufferAttribute(uv, 2));
+    geo.setIndex(idx); geo.computeVertexNormals();
+    var m = getMats(layer);
+    var A = new T.Mesh(geo, m[0]), B = new T.Mesh(geo, m[1]);
+    A.castShadow = B.castShadow = true; A.receiveShadow = B.receiveShadow = true;
+    parent.add(A); parent.add(B);
+    return A;
+  }
+
+  function buildPoly(opt, style) {
+    var need = opt.need, f = opt.fit;
+    var isPrism = need.shape === 'prism', cloth = need.kind === 'cloth', diag = !isPrism;
+    var ovl = need.ovl, R2 = Math.SQRT1_2;
+    var p = isPrism ? need.s : need.p, q = isPrism ? need.hh : need.q, a = isPrism ? need.L : need.axis;
+    var Wa = f.orient === 1 ? Math.min(f.needX, f.sheetX) : Math.min(f.needY, f.sheetY);
+    var Xa = f.orient === 1 ? Math.min(f.needY, f.sheetY) : Math.min(f.needX, f.sheetX);
+    var shortAround = Math.max(0, need.around - Wa), shortAlong = Math.max(0, need.along - Xa);
+    var bad = shortAround > .05 || shortAlong > .05;
+    var span = Math.max(need.around, need.along, 18);
+    var HP = p / 2, HA = a / 2;
+
+    var xm, Ea, zb, lensL, lensR, foldsL, foldsR, clip = null, uvf = null;
+    if (isPrism) {
+      xm = Math.min(HA, Xa / 2); Ea = Math.max(0, Xa / 2 - HA);
+      zb = Math.min(HP, Wa / 2);
+      var rest = Math.max(0, Wa - 2 * zb), s0 = need.s;
+      var leftAvail = rest * (s0 + ovl) / (2 * s0 + ovl), rightAvail = rest - leftAvail;
+      lensL = [Math.min(s0, leftAvail), Math.max(0, leftAvail - s0)];
+      lensR = [Math.min(s0, rightAvail)];
+      foldsL = [2 * PI / 3, 2 * PI / 3]; foldsR = [2 * PI / 3];
+    } else {
+      var hu = Wa / 2, hv = Xa / 2;
+      xm = HA; zb = HP; Ea = need.H;
+      lensL = [q, p, need.H * 2]; lensR = [q, p, need.H * 2];
+      foldsL = [PI / 2, PI / 2, PI / 2]; foldsR = [PI / 2, PI / 2, PI / 2];
+      clip = function (poly) {
+        poly = clipHalf(poly, R2, -R2, hu); poly = clipHalf(poly, -R2, R2, hu);
+        poly = clipHalf(poly, R2, R2, hv); poly = clipHalf(poly, -R2, -R2, hv);
+        return poly;
+      };
+      uvf = function (x, z) { return [(x - z) * R2 / TILE_CM + 40, (x + z) * R2 / TILE_CM + 40]; };
+    }
+
+    var sc = setupScene(span);
+    var world = new T.Group(); sc.add(world);
+    var sheet = new T.Group(); sheet.position.y = .06; world.add(sheet);
+    var root = new T.Group(); root.userData.pv = { x: 0, z: 0 }; sheet.add(root);
+    var getMats = paperMats(style);
+    function P(parent, rc, g, layer) { return panelP(parent, rc, g.userData.pv, layer, getMats, clip, uvf); }
+
+    P(root, { x0: -xm, x1: xm, z0: -zb, z1: zb }, root, 0);
+    var qc = Math.min(q, Ea);
+    var gBp = hinge(root, { x: xm, z: 0 }), gBm = hinge(root, { x: -xm, z: 0 }), gBp2 = null, gBm2 = null;
+    if (diag) {
+      P(gBp, { x0: xm, x1: xm + qc, z0: -zb, z1: zb }, gBp, 2); P(gBm, { x0: -xm - qc, x1: -xm, z0: -zb, z1: zb }, gBm, 2);
+      gBp2 = hinge(gBp, { x: xm + qc, z: 0 }); gBm2 = hinge(gBm, { x: -xm - qc, z: 0 });
+      P(gBp2, { x0: xm + qc, x1: xm + Ea, z0: -zb, z1: zb }, gBp2, 3); P(gBm2, { x0: -xm - Ea, x1: -xm - qc, z0: -zb, z1: zb }, gBm2, 3);
+    } else {
+      P(gBp, { x0: xm, x1: xm + Ea, z0: -zb, z1: zb }, gBp, 2); P(gBm, { x0: -xm - Ea, x1: -xm, z0: -zb, z1: zb }, gBm, 2);
+    }
+
+    function chain(sign, lens, layerBase) {
+      var out = [], parent = root, pvz = sign * zb;
+      for (var i = 0; i < lens.length; i++) {
+        var len = lens[i];
+        if (len < 1e-3) { out.push(null); continue; }
+        var gr = hinge(parent, { x: 0, z: pvz }), z1 = pvz + sign * len;
+        var zl = Math.min(pvz, z1), zh = Math.max(pvz, z1);
+        P(gr, { x0: -xm, x1: xm, z0: zl, z1: zh }, gr, layerBase + i * 2);
+        var eaPiece = diag ? Math.min(Ea, q + .5) : Ea;
+        var gp = hinge(gr, { x: xm + .02 * (i + 1), z: pvz }), gm = hinge(gr, { x: -xm - .02 * (i + 1), z: pvz });
+        P(gp, { x0: xm, x1: xm + eaPiece, z0: zl, z1: zh }, gp, layerBase + i * 2);
+        P(gm, { x0: -xm - eaPiece, x1: -xm, z0: zl, z1: zh }, gm, layerBase + i * 2);
+        out.push({ g: gr, gp: gp, gm: gm });
+        parent = gr; pvz = z1;
+      }
+      return out;
+    }
+    var CL = chain(-1, lensL, 1), CR = chain(1, lensR, 2);
+
+    // 안에 든 물건
+    var boxMat = new T.MeshStandardMaterial({ color: 0xb4875a, roughness: .85 });
+    var obj;
+    if (isPrism) {
+      var sh = new T.Shape(); var hs = p / 2 - .14, hh = Math.max(.2, q - .2);
+      sh.moveTo(-hs, 0); sh.lineTo(hs, 0); sh.lineTo(0, hh); sh.closePath();
+      var ex = new T.ExtrudeGeometry(sh, { depth: Math.max(.2, a - .2), bevelEnabled: false });
+      ex.rotateY(PI / 2); ex.translate(-(a - .2) / 2 + 0, 0, 0);
+      // rotateY(+90°): 로컬 z → 세계 x. 삼각형이 z축 방향으로 눕지 않도록 위치 보정
+      obj = new T.Mesh(ex, boxMat); obj.userData.baseY = .06 + .1;
+    } else {
+      obj = new T.Mesh(new T.BoxGeometry(Math.max(.1, a - .2), Math.max(.1, q - .2), Math.max(.1, p - .2)), boxMat);
+      obj.userData.baseY = .06 + .1 + Math.max(.1, q - .2) / 2;
+    }
+    obj.castShadow = true; obj.receiveShadow = true; world.add(obj);
+
+    // 테이프 (대각선만 위 이음새)
+    var tapeMat = new T.MeshStandardMaterial({ color: 0xfff1c9, roughness: .3, transparent: true, opacity: .62, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -10, polygonOffsetUnits: -10 });
+    var tapeTop = new T.Mesh(new T.PlaneGeometry(1, 1), tapeMat);
+    tapeTop.geometry.translate(.5, 0, 0); tapeTop.rotation.x = -PI / 2;
+    tapeTop.position.set(-xm, .06 + q + .05, 0); tapeTop.scale.set(Math.max(.01, 2 * xm), 2.2, 1); tapeTop.userData.len = 2 * xm;
+    tapeTop.visible = false;
+    if (diag && !cloth) world.add(tapeTop);
+
+    // 리본 · 매듭
+    var rc = style.ribbon, rmat = ribbonMat(rc);
+    var rw = Math.max(.9, Math.min(2.2, Math.min(p, q) * .12));
+    var band1 = null, band2 = null, topY;
+    if (isPrism) {
+      var cy = .06 + q / 3, k = 1 + .45 / (p * .289), V = [[0, .06 + q], [p / 2, .06], [-p / 2, .06]];
+      var vs = V.map(function (v) { return [(v[0]) * k, cy + (v[1] - cy) * k]; });
+      var pts = [];
+      for (var e = 0; e < 3; e++) {
+        var A0 = vs[e], B0 = vs[(e + 1) % 3];
+        for (var j = 0; j < 14; j++) { var tt = j / 14; pts.push(new T.Vector3(0, lerp(A0[1], B0[1], tt), lerp(A0[0], B0[0], tt))); }
+      }
+      pts.push(pts[0].clone());
+      band1 = ribbonStrip(pts, new T.Vector3(1, 0, 0), rw, rmat); world.add(band1);
+      topY = vs[0][1];
+    } else if (!cloth) {
+      var yTop = .06 + q + .24, yBot = .02, hz = HP + .32, hx = HA + .3;
+      band1 = ribbonStrip(roundRectPath(hz, (yTop - yBot) / 2, .7, 16).map(function (o) { return new T.Vector3(0, (yTop + yBot) / 2 + o.b, o.a); }), new T.Vector3(1, 0, 0), rw, rmat);
+      band2 = ribbonStrip(roundRectPath(hx, (yTop + .16 - yBot) / 2, .7, 18).map(function (o) { return new T.Vector3(o.a, (yTop + .16 + yBot) / 2 + o.b, 0); }), new T.Vector3(0, 0, 1), rw, rmat);
+      world.add(band1); world.add(band2); topY = yTop;
+    } else { topY = .06 + q + .24; }
+    var bow = makeBow(rc, Math.max(.6, Math.min(1.8, Math.min(p, a) / 9)) * (cloth ? 1.25 : 1));
+    bow.position.set(0, topY + .32, 0); bow.userData.base = bow.scale.x; world.add(bow);
+    var spark = makeSparkles(70, 17); world.add(spark);
+
+    var TS = {
+      sheetIn: [0, .9], drop: [.8, 2.0], sides: [2.3, 3.4], top1: [3.5, 4.4], top2: [4.0, 4.9], tip1: [4.9, 5.5], tip2: [5.1, 5.7], tape: [5.7, 6.2],
+      xpS: [6.4, 7.0], xpB: [7.0, 7.5], xpB2: [7.5, 7.9], xpT: [7.9, 8.4],
+      xmS: [9.2, 9.7], xmB: [9.7, 10.2], xmB2: [10.2, 10.6], xmT: [10.6, 11.0],
+      rib1: [11.4, 12.7], rib2: [12.7, 13.9], bow: [13.9, 14.9], fin: 14.9
+    };
+    var TOTAL = 17.2;
+    function A(t, r) { return eio(seg(t, r[0], r[1])); }
+    var topTimes = { '-1': [TS.sides, TS.top1, TS.tip1], '1': [TS.sides, TS.top2, TS.tip2] };
+
+    var shortMsg = shortAround > .05 && shortAlong > .05 ? ('😱 둘레 ' + fmt(shortAround) + 'cm · 끝 ' + fmt(shortAlong) + 'cm 모자라요')
+      : shortAround > .05 ? ('😱 한 방향 ' + fmt(shortAround) + ' cm 모자라요') : ('😱 끝 쪽 ' + fmt(shortAlong) + ' cm 모자라요');
+    var caps;
+    if (isPrism) {
+      caps = [
+        { t: 0, s: '포장지를 쫙 펼쳐요' }, { t: .9, s: '삼각기둥을 한 면 위에 올려요' }, { t: 2.3, s: '첫 번째 면을 감싸 올려요' },
+        { t: 3.5, s: '꼭대기를 지나 두 번째 면을 덮어요' }, { t: 5.7, s: '' }, { t: 6.4, s: '오른쪽 끝: 날개를 접어요' },
+        { t: 7.0, s: '아래 날개를 올리고' }, { t: 7.9, s: '남은 날개를 덮어요' }, { t: 8.6, s: '반대쪽도 똑같이' }, { t: 9.2, s: '날개 접기 → 덮기' },
+        { t: 11.4, s: '리본을 둘러요' }, { t: 13.9, s: '매듭 뿅!' }, { t: 14.9, s: bad ? shortMsg : '완성! 🎁', bad: bad }
+      ];
+    } else {
+      caps = [
+        { t: 0, s: cloth ? '천을 마름모로 펼쳐요' : '종이를 마름모로 펼쳐요' }, { t: .9, s: '상자를 가운데에 올려요' }, { t: 2.3, s: '양쪽 모서리를 올려요' },
+        { t: 3.5, s: '위에서 만나게 덮어요' }, { t: 4.9, s: '남는 끝은 반대편으로 넘겨요' }, { t: 5.7, s: cloth ? '' : '이음새에 테이프 쭉' },
+        { t: 6.4, s: '오른쪽 끝: 모서리를 접어요' }, { t: 7.0, s: '아래 모서리를 세워서' }, { t: 7.5, s: '위로 넘겨 덮어요' }, { t: 8.6, s: '반대쪽도 똑같이' },
+        { t: 11.4, s: cloth ? '모서리를 묶어요' : '리본을 둘러요' }, { t: 13.9, s: cloth ? '매듭 완성!' : '매듭 뿅!' }, { t: 14.9, s: bad ? shortMsg : '완성! 🎁', bad: bad }
+      ];
+    }
+    var camKeys = [
+      { t: 0, az: .75, el: 1.05, d: 1.05 }, { t: 2.3, az: .55, el: .95, d: .95 }, { t: 4.6, az: .1, el: 1.1, d: .85 },
+      { t: 5.9, az: .15, el: 1.0, d: .85 }, { t: 6.4, az: 1.15, el: .6, d: .78 }, { t: 8.5, az: 1.1, el: .62, d: .78 },
+      { t: 9.2, az: -1.1, el: .58, d: .78 }, { t: 11.1, az: -1.15, el: .62, d: .78 }, { t: 11.5, az: -.1, el: .9, d: .88 },
+      { t: 14.0, az: .45, el: .8, d: .78 }, { t: 14.9, az: .6, el: .72, d: .8 }
+    ];
+
+    function update(t) {
+      var sIn = outBack(seg(t, TS.sheetIn[0], TS.sheetIn[1]));
+      sheet.scale.setScalar(Math.max(.001, sIn)); sheet.visible = t > .001;
+      var dk = seg(t, TS.drop[0], TS.drop[1]);
+      obj.visible = t >= TS.drop[0];
+      obj.position.set(0, obj.userData.baseY + (1 - outBounce(dk)) * (q * 2.2 + 14), 0);
+      obj.rotation.z = (1 - dk) * .18;
+      [[CL, -1, foldsL], [CR, 1, foldsR]].forEach(function (cfg) {
+        var ch = cfg[0], sg = cfg[1], fo = cfg[2], tms = topTimes[String(sg)];
+        for (var i = 0; i < ch.length; i++) {
+          if (!ch[i]) continue;
+          var ang = A(t, tms[Math.min(i, 2)]) * fo[i];
+          ch[i].g.rotation.x = -sg * ang;
+          var pT = i === 0 ? TS.xpS : TS.xpT, mT = i === 0 ? TS.xmS : TS.xmT;
+          ch[i].gp.rotation.z = A(t, pT) * PI / 2;
+          ch[i].gm.rotation.z = -A(t, mT) * PI / 2;
+        }
+      });
+      gBp.rotation.z = A(t, TS.xpB) * PI / 2; gBm.rotation.z = -A(t, TS.xmB) * PI / 2;
+      if (gBp2) { gBp2.rotation.z = A(t, TS.xpB2) * PI / 2; gBm2.rotation.z = -A(t, TS.xmB2) * PI / 2; }
+      var k0 = seg(t, TS.tape[0], TS.tape[1]); tapeTop.visible = k0 > 0; tapeTop.scale.x = Math.max(.001, tapeTop.userData.len * eio(k0));
+      if (band1) revealStrip(band1, eio(seg(t, TS.rib1[0], TS.rib1[1])));
+      if (band2) revealStrip(band2, eio(seg(t, TS.rib2[0], TS.rib2[1])));
+      var bk = seg(t, TS.bow[0], TS.bow[1]);
+      bow.visible = bk > 0; bow.scale.setScalar(Math.max(.001, bow.userData.base * outElastic(bk)));
+      var fin = t - TS.fin;
+      spark.visible = fin > 0 && !bad;
+      if (spark.visible) spark.userData.update(fin, 0, q * .8, 0, Math.min(p, a) * .45);
+    }
+
+    return {
+      scene: sc, update: update, total: TOTAL, bad: bad, span: span,
+      caps: caps, camKeys: camKeys, finalT: TS.fin, capAt: function (t) { return captionAt(caps, t); },
+      spanAt: function (t) { var objSpan = Math.max(a, p, q * 1.6) * 1.15 + 6; return lerp(span, Math.min(span, objSpan), sm(seg(t, 3.4, 6.0))); },
+      target: function () { return { x: 0, y: q * .35, z: 0 }; },
+      steps: [{ n: '놓기', t: 0.9 }, { n: '감싸기', t: 2.3 }, { n: '덮기', t: 3.5 }, { n: '끝 접기', t: 6.4 }, { n: cloth ? '매듭' : '리본', t: 11.4 }, { n: '완성', t: 14.9 }],
+      turntable: true
+    };
+  }
+
+  /* ───────── 공 · 인형 (종이를 둥글게 펼쳐 위로 모아 묶기) ───────── */
+  function buildBall(opt, style) {
+    var need = opt.need, f = opt.fit;
+    var r = need.r, rp = r + .07, yc = rp + .06;
+    var Wa = f.orient === 1 ? Math.min(f.needX, f.sheetX) : Math.min(f.needY, f.sheetY);
+    var Xa = f.orient === 1 ? Math.min(f.needY, f.sheetY) : Math.min(f.needX, f.sheetX);
+    var Rd = Math.min(Wa, Xa) / 2, RdNeed = need.S / 2;
+    var shortR = Math.max(0, RdNeed - Rd) * 2;
+    var bad = shortR > .05;
+    var span = Math.max(need.S, 18);
+    var ring = PI * rp, emax = Math.max(0, Rd - ring);
+
+    var sc = setupScene(span);
+    var world = new T.Group(); sc.add(world);
+    var getMats = paperMats(style);
+
+    var nR = 72, nA = 96, cnt = (nR + 1) * (nA + 1);
+    var pos = new Float32Array(cnt * 3), uv = new Float32Array(cnt * 2), idx = [];
+    var i, j;
+    for (i = 0; i <= nR; i++) for (j = 0; j <= nA; j++) {
+      var rho = Rd * i / nR, ph = PI * 2 * j / nA, k = i * (nA + 1) + j;
+      uv[k * 2] = rho * Math.cos(ph) / TILE_CM + 40; uv[k * 2 + 1] = rho * Math.sin(ph) / TILE_CM + 40;
+    }
+    for (i = 0; i < nR; i++) for (j = 0; j < nA; j++) {
+      var p00 = i * (nA + 1) + j, p01 = p00 + 1, p10 = p00 + nA + 1, p11 = p10 + 1;
+      idx.push(p00, p01, p10, p01, p11, p10);
+    }
+    var geo = new T.BufferGeometry();
+    geo.setAttribute('position', new T.BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new T.BufferAttribute(uv, 2));
+    geo.setIndex(idx);
+    var mm = getMats(0);
+    var inner = new T.Mesh(geo, mm[0]), outer = new T.Mesh(geo, mm[1]);
+    inner.frustumCulled = outer.frustumCulled = false;
+    inner.castShadow = outer.castShadow = true; inner.receiveShadow = outer.receiveShadow = true;
+    world.add(inner); world.add(outer);
+
+    var ball = new T.Mesh(new T.SphereGeometry(Math.max(.2, r - .03), 40, 28), new T.MeshStandardMaterial({ color: 0x9cc3df, roughness: .3, metalness: .2 }));
+    ball.castShadow = true; world.add(ball); ball.visible = false;
+
+    var rc = style.ribbon, rmat = ribbonMat(rc);
+    var e0 = Math.min(2.4, Math.max(.8, emax * .35)), radTie = .5 + .1 * e0 + .22;
+    var tieY = yc + rp + e0 * .88;
+    var ringM = new T.Mesh(new T.TorusGeometry(1, .16, 10, 32), rmat);
+    ringM.rotation.x = PI / 2; ringM.castShadow = true; world.add(ringM); ringM.visible = false;
+    var bow = makeBow(rc, Math.max(.6, Math.min(1.3, r / 5)));
+    bow.position.set(0, tieY + .35, 0); bow.userData.base = bow.scale.x; world.add(bow);
+    var spark = makeSparkles(70, 23); world.add(spark);
+
+    var TS = { sheetIn: [0, .9], drop: [.8, 2.0], wrap: [2.4, 7.0], ring: [7.3, 8.0], bow: [8.0, 9.0], fin: 9.0 };
+    var TOTAL = 11.6, LAG = .75;
+    var shortMsg = '😱 종이 지름이 ' + fmt(shortR) + ' cm 모자라요';
+    var caps = [
+      { t: 0, s: '종이를 쫙 펼쳐요' }, { t: .9, s: '공을 가운데에 올려요' }, { t: 2.4, s: '가장자리를 위로 모아요' },
+      { t: 5.0, s: '꼭대기에서 주름을 잡아요' }, { t: 7.3, s: '리본으로 묶어요' }, { t: 8.0, s: '매듭 뿅!' }, { t: 9.0, s: bad ? shortMsg : '완성! 🎁', bad: bad }
+    ];
+    var camKeys = [
+      { t: 0, az: .6, el: 1.0, d: 1.05 }, { t: 2.4, az: .5, el: .9, d: .95 }, { t: 5.5, az: .3, el: .65, d: .8 },
+      { t: 7.3, az: .2, el: .5, d: .72 }, { t: 9.0, az: .5, el: .62, d: .78 }
+    ];
+
+    var lastKey = '';
+    function update(t) {
+      var sIn = outBack(seg(t, TS.sheetIn[0], TS.sheetIn[1]));
+      world.scale.setScalar(Math.max(.001, sIn));
+      var inVis = t > .001; inner.visible = outer.visible = inVis;
+      var dk = seg(t, TS.drop[0], TS.drop[1]);
+      ball.visible = t >= TS.drop[0];
+      ball.position.set(0, yc + (1 - outBounce(dk)) * (r * 2.5 + 14), 0);
+      var g = eio(seg(t, TS.wrap[0], TS.wrap[1]));
+      var key = g.toFixed(4);
+      if (key !== lastKey) {
+        lastKey = key;
+        for (var a = 0; a <= nR; a++) {
+          var rho = Rd * a / nR;
+          var gv = eio(clamp(g * (1 + LAG) - LAG * (rho / Math.max(.001, Rd)), 0, 1));
+          for (var b = 0; b <= nA; b++) {
+            var phi = PI * 2 * b / nA, cs = Math.cos(phi), sn = Math.sin(phi), k = (a * (nA + 1) + b) * 3;
+            var fx = rho * cs, fy = .06, fz = rho * sn, wx, wy, wz;
+            if (rho <= ring) {
+              var th = rho / rp;
+              wx = rp * Math.sin(th) * cs; wy = yc - rp * Math.cos(th); wz = rp * Math.sin(th) * sn;
+            } else {
+              var e = rho - ring, rad = .5 + .1 * e, fl = e - (emax - 2.5);
+              if (fl > 0) rad += 1.8 * Math.pow(fl / 2.5, 2);
+              rad *= 1 + .22 * (.3 + .7 * e / Math.max(.5, emax)) * Math.sin(10 * phi + .3 * e);
+              wx = rad * Math.cos(phi + .2 * e); wy = yc + rp + e * .88; wz = rad * Math.sin(phi + .2 * e);
+            }
+            var px = fx + (wx - fx) * gv, py = fy + (wy - fy) * gv, pz = fz + (wz - fz) * gv;
+            var dx = px, dy = py - yc, dz = pz, L = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (L < rp && L > 1e-6 && ball.visible) { var s = rp / L; px = dx * s; py = yc + dy * s; pz = dz * s; }
+            pos[k] = px; pos[k + 1] = py; pos[k + 2] = pz;
+          }
+        }
+        geo.attributes.position.needsUpdate = true; geo.computeVertexNormals();
+      }
+      var rk = seg(t, TS.ring[0], TS.ring[1]), bk = seg(t, TS.bow[0], TS.bow[1]);
+      ringM.visible = rk > 0 && emax > .5; var rs = Math.max(.001, outBack(rk));
+      ringM.position.set(0, tieY, 0); ringM.scale.set(rs * radTie, rs * radTie, rs * radTie * 1.5);
+      bow.visible = bk > 0 && emax > .5; bow.scale.setScalar(Math.max(.001, bow.userData.base * outElastic(bk)));
+      var fin = t - TS.fin;
+      spark.visible = fin > 0 && !bad;
+      if (spark.visible) spark.userData.update(fin, 0, yc + 2, 0, Math.max(r, 3) * 1.1);
+    }
+
+    return {
+      scene: sc, update: update, total: TOTAL, bad: bad, span: span,
+      caps: caps, camKeys: camKeys, finalT: TS.fin, capAt: function (t) { return captionAt(caps, t); },
+      spanAt: function (t) { var objSpan = (2 * rp + emax * .9 + 10) * 1.1; return lerp(span, Math.min(span, objSpan), sm(seg(t, 3.0, 7.0))); },
+      target: function (t) { return { x: 0, y: yc * (.85 + .35 * seg(t, 3, 7)), z: 0 }; },
+      steps: [{ n: '놓기', t: .9 }, { n: '모으기', t: 2.4 }, { n: '리본', t: 7.3 }, { n: '완성', t: 9.0 }],
+      turntable: true
+    };
+  }
+
   /* ───────── 원통 · 병 ───────── */
   function buildTube(opt, style) {
     var need = opt.need, f = opt.fit, isBottle = need.shape === 'bottle';
@@ -804,7 +1157,10 @@
   function show(opt, style) {
     if (!S.ok) return false;
     if (S.cur) dispose(S.cur.scene);
-    S.cur = opt.need.shape === 'box' ? buildBox(opt, style) : buildTube(opt, style);
+    var N = opt.need;
+    S.cur = N.shape === 'ball' ? buildBall(opt, style)
+      : (N.shape === 'prism' || N.kind === 'diag' || N.kind === 'cloth') ? buildPoly(opt, style)
+      : N.shape === 'box' ? buildBox(opt, style) : buildTube(opt, style);
     S.cam.az = .6; S.cam.el = .9; S.cam.d = 1;
     applyT(true);
     S.dirty = true;

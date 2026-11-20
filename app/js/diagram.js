@@ -144,7 +144,76 @@
     var A = opt.around, L = opt.along;
     var TOP = '#3f7fc4', SIDE = '#2f9a6c', FLOOR = '#d69a2a', FLAP = '#c9372c', GATH = '#b24d9b';
 
-    if (need.shape === 'box') {
+    if (need.square && need.shape === 'box') {
+      /* 일본식 대각선 · 보자기: 상자 축이 마름모(회전한 정사각형)의 대각선과 나란하다 */
+      var Sq = need.S, axl = need.axis, pwd = need.p, qh = need.q, cxm = Sq / 2, R2 = Math.SQRT1_2, ZH = axl / 2, ZP = pwd / 2, BIG = Sq * 2;
+      var cp = el('clipPath', { id: 'sheetclip' }, defs); el('rect', { x: 0, y: 0, width: nx, height: ny }, cp);
+      gZones.setAttribute('clip-path', 'url(#sheetclip)'); gFolds.setAttribute('clip-path', 'url(#sheetclip)');
+      var Bp = function (bx, bz) { return [cxm + (bx - bz) * R2, cxm + (bx + bz) * R2]; };
+      var bpoly = function (parent, x0, x1, z0, z1, attrs) {
+        var pts = [Bp(x0, z0), Bp(x1, z0), Bp(x1, z1), Bp(x0, z1)].map(function (q) { return q[0] + ',' + q[1]; }).join(' ');
+        var a = { points: pts }; for (var k in attrs) a[k] = attrs[k];
+        return el('polygon', a, parent);
+      };
+      var blabel = function (bx, bz, t1, t2, minCm) {
+        var c = Bp(bx, bz);
+        if (c[0] < Sq * .04 || c[0] > Sq * .96 || c[1] < Sq * .04 || c[1] > Sq * .96) return;
+        var fs = Math.min(U * 3.3, Sq * .045);
+        if (minCm * pxCm < 26) return;
+        text(gText, t1, c[0], c[1] - (t2 ? fs * .55 : 0), fs, { fill: INK });
+        if (t2) text(gText, t2, c[0], c[1] + fs * .65, fs * .8, { fill: INK, opacity: .72 });
+      };
+      bpoly(gZones, -ZH, ZH, -ZP, ZP, { fill: FLOOR, 'fill-opacity': .34 });
+      [1, -1].forEach(function (sg) {
+        bpoly(gZones, -ZH, ZH, sg * ZP, sg * (ZP + qh), { fill: SIDE, 'fill-opacity': .28 });
+        bpoly(gZones, -ZH, ZH, sg * (ZP + qh), sg * (ZP + qh + pwd), { fill: TOP, 'fill-opacity': .22 });
+        bpoly(gZones, -ZH, ZH, sg * (ZP + qh + pwd), sg * BIG, { fill: SIDE, 'fill-opacity': .1 });
+        bpoly(gZones, sg * ZH, sg * (ZH + qh), -ZP, ZP, { fill: FLAP, 'fill-opacity': .2 });
+        bpoly(gZones, sg * (ZH + qh), sg * BIG, -ZP, ZP, { fill: FLAP, 'fill-opacity': .1 });
+        [ZP, ZP + qh, ZP + qh + pwd].forEach(function (z) {
+          var a1 = Bp(-BIG, sg * z), a2 = Bp(BIG, sg * z);
+          line(gFolds, a1, a2, { stroke: '#1c5aa0', 'stroke-width': U * .26, 'stroke-dasharray': (U * 1.4) + ' ' + (U * .8), 'stroke-linecap': 'round', opacity: .85 });
+        });
+        [ZH, ZH + qh].forEach(function (x) {
+          var a1 = Bp(sg * x, -BIG), a2 = Bp(sg * x, BIG);
+          line(gFolds, a1, a2, { stroke: '#1c5aa0', 'stroke-width': U * .26, 'stroke-dasharray': (U * 1.4) + ' ' + (U * .8), 'stroke-linecap': 'round', opacity: .85 });
+        });
+        blabel(0, sg * (ZP + qh / 2), '옆면', f1(qh), qh);
+        blabel(0, sg * (ZP + qh + pwd / 2), '윗면', f1(pwd), pwd);
+        blabel(sg * (ZH + qh / 2), 0, '끝 접기', f1(qh), qh);
+      });
+      blabel(0, 0, '바닥', f1(axl) + '×' + f1(pwd), Math.min(axl, pwd));
+      var fp = [Bp(-ZH, -ZP), Bp(ZH, -ZP), Bp(ZH, ZP), Bp(-ZH, ZP)].map(function (q) { return q[0] + ',' + q[1]; }).join(' ');
+      el('polygon', { points: fp, fill: 'none', stroke: INK, 'stroke-opacity': .55, 'stroke-width': U * .22, 'stroke-dasharray': (U * .8) + ' ' + (U * .6) }, gText);
+      if (need.kind === 'cloth') {
+        [[Sq * .09, Sq * .09], [Sq * .91, Sq * .09], [Sq * .91, Sq * .91], [Sq * .09, Sq * .91]].forEach(function (c, i) {
+          el('circle', { cx: c[0], cy: c[1], r: U * 2.4, fill: '#e0ad3a', 'fill-opacity': .85, stroke: INK, 'stroke-width': U * .2 }, gText);
+          text(gText, '매듭', c[0], c[1] + (c[1] < Sq / 2 ? U * 5 : -U * 5), U * 2.6, { fill: INK });
+        });
+      }
+    } else if (need.shape === 'ball') {
+      var bcx = nx / 2, br = need.r, ring = Math.PI * br;
+      el('circle', { cx: bcx, cy: bcx, r: nx / 2, fill: RED, 'fill-opacity': .07 }, gZones);
+      el('circle', { cx: bcx, cy: bcx, r: ring, fill: SIDE, 'fill-opacity': .2 }, gZones);
+      el('circle', { cx: bcx, cy: bcx, r: br, fill: FLOOR, 'fill-opacity': .4 }, gZones);
+      el('circle', { cx: bcx, cy: bcx, r: nx / 2, fill: 'none', stroke: RED, 'stroke-width': U * .3, 'stroke-dasharray': (U * 1.6) + ' ' + (U * 1) }, gFolds);
+      el('circle', { cx: bcx, cy: bcx, r: ring, fill: 'none', stroke: '#1c5aa0', 'stroke-width': U * .26, 'stroke-dasharray': (U * 1.4) + ' ' + (U * .8) }, gFolds);
+      text(gText, '공 놓는 자리', bcx, bcx - (br > U * 4 ? 0 : U * 3), Math.min(U * 3.2, br * .5 + U), { fill: INK });
+      if (ring * pxCm > 40) text(gText, '여기까지 공을 덮어요', bcx, bcx + ring * .72, U * 2.8, { fill: INK, opacity: .8 });
+      var gat = nx / 2 - ring;
+      if (gat * pxCm > 22) text(gText, '모아서 묶는 끝', bcx, bcx - (ring + gat / 2), Math.min(U * 2.8, gat * .55), { fill: INK, opacity: .85 });
+      text(gText, '둥글게 잘라요 (지름 ' + f1(nx) + ')', bcx, ny + U * 3.4, U * 3, { fill: CHALK });
+    } else if (need.shape === 'prism') {
+      var sp = need.s, ov = need.ovl, Ep = need.E, Lp = need.L, m0 = Ep, m1 = Ep + Lp;
+      zone(0, ov, m0, m1, TOP, .24, '겹침', f1(ov), 22);
+      zone(ov, ov + sp, m0, m1, SIDE, .28, '옆면', f1(sp), 30);
+      zone(ov + sp, ov + 2 * sp, m0, m1, FLOOR, .32, '바닥', f1(sp), 30);
+      zone(ov + 2 * sp, ov + 3 * sp, m0, m1, SIDE, .28, '옆면', f1(sp), 30);
+      zone(0, A, 0, Ep, FLAP, .15, '끝 접기', f1(Ep), 34);
+      zone(0, A, m1, L, FLAP, .15, '끝 접기', f1(Ep), 34);
+      foldLines(fl.around.map(function (u) { return [P(u, 0), P(u, L)]; }));
+      foldLines(fl.along.map(function (v) { return [P(0, v), P(A, v)]; }));
+    } else if (need.shape === 'box') {
       var t = need.t, q2 = need.q, p = need.p, E = need.E, ax = need.axis;
       var main0 = E, main1 = E + ax;
       zone(0, t, main0, main1, TOP, .22, '윗면', f1(t));

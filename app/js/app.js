@@ -7,12 +7,26 @@
   var DIMS = {
     box: [{ k: 'a', label: '가로', min: 2, max: 90 }, { k: 'b', label: '세로', min: 2, max: 90 }, { k: 'h', label: '높이', min: 1, max: 60 }],
     cyl: [{ k: 'd', label: '지름', min: 2, max: 40 }, { k: 'h', label: '높이', min: 2, max: 60 }],
-    bottle: [{ k: 'd', label: '지름', min: 3, max: 16 }, { k: 'h', label: '높이', min: 12, max: 50 }]
+    bottle: [{ k: 'd', label: '지름', min: 3, max: 16 }, { k: 'h', label: '높이', min: 12, max: 50 }],
+    flat: [{ k: 'a', label: '가로', min: 3, max: 90 }, { k: 'b', label: '세로', min: 3, max: 90 }, { k: 'h', label: '두께', min: .5, max: 12 }],
+    ball: [{ k: 'd', label: '지름', min: 3, max: 50 }],
+    prism: [{ k: 's', label: '한 변', min: 2, max: 30 }, { k: 'L', label: '길이', min: 4, max: 70 }],
+    pouch: [{ k: 'a', label: '폭', min: 5, max: 70 }, { k: 'b', label: '두께', min: 1, max: 25 }, { k: 'h', label: '높이', min: 5, max: 80 }]
   };
   var PRESETS = {
     box: [['신발 상자', 33, 20, 12], ['책', 21, 15, 3], ['케이크 상자', 25, 25, 12], ['큰 박스', 60, 40, 30]],
     cyl: [['머그컵', 8.5, 10], ['텀블러', 7.5, 20], ['캔들', 9, 11]],
-    bottle: [['와인', 7.5, 30], ['양주', 9, 28], ['소주', 6.5, 21]]
+    bottle: [['와인', 7.5, 30], ['양주', 9, 28], ['소주', 6.5, 21]],
+    flat: [['책', 21, 15, 3], ['액자', 30, 24, 3], ['카드', 15, 10, 1], ['노트북', 35, 25, 3]],
+    ball: [['오너먼트', 8], ['축구공', 22], ['곰인형', 25], ['농구공', 24]],
+    prism: [['초콜릿', 4, 20], ['토블론', 4, 25], ['삼각 선물', 10, 30]],
+    pouch: [['티셔츠', 28, 4, 35], ['목도리', 25, 6, 30], ['양말 세트', 20, 5, 25], ['스웨터', 32, 8, 38]]
+  };
+  var SHAPE_NAMES = { box: '상자', flat: '납작', cyl: '원통', bottle: '병', ball: '공·인형', prism: '삼각기둥', pouch: '봉투' };
+  var METHOD_NOTES = {
+    basic: '상자를 눕혀 종이로 한 바퀴 감싸고, 양끝을 접어요. 가장 널리 쓰는 방법이에요.',
+    diag: '정사각형 종이를 마름모로 놓고 모서리를 접어 올려요. 종이가 조금 더 들 수 있지만 이음새가 위 한가운데에 와서 깔끔해요.',
+    cloth: '정사각형 천(보자기)으로 싸고 모서리끼리 묶어요. 테이프가 필요 없고 천은 다시 쓸 수 있어요. 매듭 여분 12cm를 더했어요.'
   };
   var PATTERN_NAMES = [['red', '빨강 별'], ['kraft', '크라프트'], ['snow', '눈꽃'], ['stripe', '사탕 줄무늬'], ['plaid', '체크'], ['pine', '전나무']];
   var RIBBONS = [['#d3342a', '빨강'], ['#e0ad3a', '금색'], ['#f4efe4', '흰색'], ['#1f6a4d', '초록']];
@@ -21,7 +35,8 @@
 
   var state = {
     shape: 'box',
-    dims: { box: { a: 33, b: 20, h: 12 }, cyl: { d: 8.5, h: 10 }, bottle: { d: 7.5, h: 30 } },
+    dims: { box: { a: 33, b: 20, h: 12 }, cyl: { d: 8.5, h: 10 }, bottle: { d: 7.5, h: 30 }, flat: { a: 21, b: 15, h: 3 }, ball: { d: 10 }, prism: { s: 4, L: 25 }, pouch: { a: 28, b: 4, h: 35 } },
+    method: 'basic', gifts: [], rollLen: 300,
     paper: { type: 'roll', R: 70, W: 59.4, H: 84.1 },
     ovl: 3, axisPick: 'auto', pattern: 'red', ribbon: 1, tab: 'cut', folds: true
   };
@@ -168,8 +183,20 @@
   $('shapes').addEventListener('click', function (e) {
     var b = e.target.closest('.shape'); if (!b) return;
     state.shape = b.getAttribute('data-shape'); state.axisPick = 'auto';
+    if (state.shape !== 'box' && state.shape !== 'flat') state.method = 'basic';
     Array.prototype.forEach.call($('shapes').children, function (c) { c.setAttribute('aria-checked', c === b ? 'true' : 'false'); });
-    buildDims(); schedule(true);
+    refreshMethod(); buildDims(); schedule(true);
+  });
+  function refreshMethod() {
+    var on = state.shape === 'box' || state.shape === 'flat';
+    $('method-wrap').hidden = !on;
+    Array.prototype.forEach.call($('method').children, function (c) { c.setAttribute('aria-checked', c.getAttribute('data-method') === state.method ? 'true' : 'false'); });
+    $('method-note').textContent = METHOD_NOTES[state.method];
+  }
+  $('method').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    state.method = b.getAttribute('data-method'); state.axisPick = 'auto';
+    refreshMethod(); schedule(true);
   });
   $('paper-type').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
@@ -187,13 +214,14 @@
   $('btn-recut').addEventListener('click', function () { Diagram.replay(); });
   $('tab-cut').addEventListener('click', function () { setTab('cut'); });
   $('tab-wrap').addEventListener('click', function () { setTab('wrap'); });
+  $('tab-pack').addEventListener('click', function () { setTab('pack'); });
 
   /* ───────── 계산 → 화면 ───────── */
   function currentSpec() {
     var d = state.dims[state.shape], P = state.paper;
     var paper = P.type === 'roll' ? { type: 'roll', R: P.R } : P.type === 'sheet' ? { type: 'sheet', W: P.W, H: P.H } : { type: 'none' };
-    var s = { shape: state.shape, ovl: state.ovl, paper: paper, axisPick: state.axisPick };
-    if (state.shape === 'box') { s.a = d.a; s.b = d.b; s.h = d.h; } else { s.d = d.d; s.h = d.h; }
+    var s = { shape: state.shape, method: state.method, ovl: state.ovl, paper: paper, axisPick: state.axisPick };
+    for (var k in d) s[k] = d[k];
     return s;
   }
 
@@ -218,7 +246,8 @@
 
   function fitStage() {
     var st = $('stage'), svg = $('cut');
-    if (state.tab !== 'cut') { st.style.removeProperty('--ar'); st.style.removeProperty('--ar-m'); return; }
+    if (state.tab === 'wrap') { st.style.removeProperty('--ar'); st.style.removeProperty('--ar-m'); return; }
+    if (state.tab === 'pack') svg = $('packsvg');
     var ar = parseFloat(svg.getAttribute('data-ar')) || 1.6;
     st.style.setProperty('--ar', String(clamp(ar, .75, 1.7)));
     st.style.setProperty('--ar-m', String(clamp(ar, .8, 1.15)));
@@ -253,8 +282,7 @@
     if (f.paperType === 'none') $('r-left').style.fontSize = '15px'; else $('r-left').style.fontSize = '';
 
     // 설명 글
-    var N = need, axisTxt = '';
-    if (N.shape === 'box') axisTxt = '<b>' + opt.label + '</b>으로 감싸는 방법이에요. ';
+    var N = need, axisTxt = methodText(opt);
     var msg;
     if (f.paperType === 'none') {
       msg = axisTxt + '이 크기로 잘라 쓰면 돼요. 이음새가 ' + f1(N.ovl) + 'cm 겹치도록 계산했어요.';
@@ -272,6 +300,17 @@
     $('r-note').innerHTML = msg;
   }
 
+  function methodText(opt) {
+    var N = opt.need;
+    if (N.kind === 'diag') return '<b>일본식 대각선</b> 포장이에요(<b>' + opt.label + ' 두기</b>). ';
+    if (N.kind === 'cloth') return '<b>보자기</b> 포장이에요(<b>' + opt.label + ' 두기</b>). 정사각형 천을 써요. ';
+    if (N.shape === 'ball') return '<b>공·인형</b>은 종이를 아래에 깔고 위에서 모아 묶어요. ';
+    if (N.shape === 'prism') return '<b>삼각기둥</b>은 한 면을 바닥에 눕혀 감싸요. ';
+    if (N.kind === 'pouch') return '<b>봉투형</b>으로 감싸고 위쪽을 접어 닫아요. ';
+    if (N.shape === 'box') return '<b>' + opt.label + '</b>으로 감싸는 방법이에요. ';
+    return '';
+  }
+
   function shortWords(f, bold) {
     var p = [];
     if (f.shortX > .05) p.push('폭 ' + f1(Math.ceil(f.shortX * 2) / 2) + 'cm');
@@ -281,7 +320,7 @@
 
   function betterHint(opt) {
     var best = plan.options[plan.bestIdx];
-    if (plan.options.length > 1 && best.fit.ok) return '아래에서 <b>' + best.label + '</b>으로 바꾸면 맞아요.';
+    if (plan.options.length > 1 && best.fit.ok) return '아래에서 <b>' + best.label + '</b>' + (state.method === 'basic' ? '으로' : ' 두기로') + ' 바꾸면 맞아요.';
     var f = opt.fit;
     if (f.paperType === 'roll') {
       var needR = Math.min(opt.around, opt.along);
@@ -294,12 +333,13 @@
     var card = $('options-card'), host = $('options');
     if (plan.options.length < 2) { card.hidden = true; return; }
     card.hidden = false; host.innerHTML = '';
+    $('options-title').textContent = state.method === 'basic' ? '어느 방향으로 감쌀까요?' : '어느 면을 위로 둘까요?';
     plan.options.forEach(function (o, i) {
       var b = el('button', { type: 'button', 'class': 'opt', role: 'radio', 'aria-checked': i === plan.chosenIdx ? 'true' : 'false' });
       var badge = '';
       if (!o.fit.ok) badge = '<span class="o-badge bad">' + shortWords(o.fit) + ' 부족</span>';
       else if (i === plan.bestIdx) badge = '<span class="o-badge">가장 알뜰</span>';
-      b.innerHTML = badge + '<span class="o-name">' + o.label + '으로 감싸기</span>' +
+      b.innerHTML = badge + '<span class="o-name">' + o.label + (state.method === 'basic' ? '으로 감싸기' : ' 두기') + '</span>' +
         '<span class="o-size">' + f1(up(o.fit.needX)) + ' × ' + f1(up(o.fit.needY)) + '</span>' +
         '<span class="o-sub">이용률 ' + Math.round(o.eff * 100) + '%</span>';
       b.addEventListener('click', function () { state.axisPick = i; schedule(true); });
@@ -319,7 +359,32 @@
     } else {
       items.push('<b>' + f1(around) + ' × ' + f1(along) + ' cm</b> 크기로 잘라요. 둘레 방향이 <b>' + f1(around) + ' cm</b>예요.');
     }
-    if (N.shape === 'box') {
+    var rect = N.kind === 'diag' || N.kind === 'cloth' || N.shape === 'ball';
+    if (N.kind === 'diag') {
+      items.push('종이를 <b>마름모 모양</b>(모서리가 위·아래·좌·우)으로 돌려 놓아요. 한 변은 <b>' + f1(up(N.S)) + ' cm</b>예요.');
+      items.push('상자의 긴 변(<b>' + f1(N.axis) + ' cm</b>)이 마름모의 가로 대각선과 나란하도록 가운데에 올려요. 높이는 <b>' + f1(N.q) + ' cm</b>로 세워 둬요.');
+      items.push('위·아래 모서리를 상자 위로 접어 올려 가운데에서 <b>' + f1(N.ovl) + ' cm</b> 겹쳐 테이프로 붙여요.');
+      items.push('좌·우 끝 모서리는 끝면으로 올려 접고, 남는 끝은 위로 넘겨 테이프로 고정해요.');
+      items.push('리본을 십자로 두르면 완성이에요.');
+    } else if (N.kind === 'cloth') {
+      items.push('정사각형 천(한 변 <b>' + f1(up(N.S)) + ' cm</b>)을 마름모로 펴 놓고 상자(높이 <b>' + f1(N.q) + ' cm</b>)를 가운데에 올려요.');
+      items.push('마주 보는 두 모서리를 상자 위로 올려 <b>한 번 묶어요</b>. 천이 팽팽하게 당겨지게 해요.');
+      items.push('남은 두 모서리도 위로 올려 단단히 묶으면 끝이에요. 매듭에 쓰이는 여분이 <b>12 cm</b> 들어 있어요.');
+    } else if (N.shape === 'ball') {
+      items.push('종이(한 변 <b>' + f1(up(N.S)) + ' cm</b>, 둥글게 잘라도 좋아요)를 펴 놓고 가운데에 공을 올려요.');
+      items.push('가장자리를 위로 모아 쥐고 공 위쪽에서 주름을 잡아요. 공 표면을 따라 종이가 팽팽하게 붙어야 해요.');
+      items.push('모은 곳을 리본으로 묶고, 끝은 꽃잎처럼 펴요. 리본은 <b>약 40 cm</b> 있으면 돼요.');
+    } else if (N.shape === 'prism') {
+      var sp = N.s;
+      items.push('둘레 방향 끝에서 <b>' + f1(N.ovl) + '</b> · <b>' + f1(N.ovl + sp) + '</b> · <b>' + f1(N.ovl + 2 * sp) + ' cm</b> 지점을 접는 선으로 접어 자국을 내요.');
+      items.push('한 면(폭 <b>' + f1(sp) + ' cm</b>)을 바닥칸에 올리고 양쪽 면을 차례로 감싸 올려요. 끝의 <b>' + f1(N.ovl) + ' cm</b>는 겹쳐 붙여요.');
+      items.push('양쪽 끝에는 <b>' + f1(N.E) + ' cm</b>씩 남아요. 세 면의 날개를 번갈아 접어 삼각형 끝을 덮고 테이프로 고정해요.');
+      items.push('리본은 <b>약 ' + f1(Math.ceil((3 * sp + 25) / 5) * 5) + ' cm</b> 있으면 돼요.');
+    } else if (N.kind === 'pouch') {
+      items.push('물건을 종이 위에 눕히고 둘레 방향으로 말아요(폭 <b>' + f1(N.p) + ' cm</b> + 두께 <b>' + f1(N.q) + ' cm</b>). 끝의 <b>' + f1(N.ovl) + ' cm</b>는 겹쳐 붙여요.');
+      items.push('양쪽 끝에는 <b>' + f1(N.E) + ' cm</b>씩 남아요. 아래쪽은 접어 눌러 붙이고, 위쪽은 물건을 넣은 뒤 접어 닫아요.');
+      items.push('스티커나 얇은 리본으로 입구를 마무리해요. 리본은 <b>약 40 cm</b> 있으면 돼요.');
+    } else if (N.shape === 'box') {
       var t = N.t, q = N.q, p = N.p;
       items.push('둘레 방향 끝에서 <b>' + f1(t) + '</b> · <b>' + f1(t + q) + '</b> · <b>' + f1(t + q + p) + '</b> · <b>' + f1(t + 2 * q + p) + ' cm</b> 지점을 접는 선으로 살짝 접어 자국을 내요.');
       items.push('가운데 칸(폭 <b>' + f1(p) + ' cm</b>)에 상자를 올리고, 양옆을 감싸 윗면에서 <b>' + f1(N.ovl) + ' cm</b> 겹쳐 테이프로 붙여요.');
@@ -336,7 +401,7 @@
       items.push('리본은 <b>약 55 cm</b> 있으면 돼요.');
     }
     ol.innerHTML = items.map(function (s) { return '<li>' + s + '</li>'; }).join('');
-    $('steps-sub').textContent = (N.shape === 'box' ? opt.label + ' 기준' : '근사 계산');
+    $('steps-sub').textContent = (N.shape === 'box' && N.kind !== 'pouch' ? opt.label + (state.method === 'basic' ? ' 기준' : ' 두기') : '근사 계산');
   }
 
   /* ───────── 탭 · 3D ───────── */
@@ -344,11 +409,12 @@
 
   function setTab(name) {
     state.tab = name;
-    var wrap = name === 'wrap';
-    $('tab-cut').setAttribute('aria-selected', wrap ? 'false' : 'true');
+    var wrap = name === 'wrap', cut = name === 'cut', pack = name === 'pack';
+    $('tab-cut').setAttribute('aria-selected', cut ? 'true' : 'false');
     $('tab-wrap').setAttribute('aria-selected', wrap ? 'true' : 'false');
-    $('panel-cut').hidden = wrap; $('panel-wrap').hidden = !wrap;
-    $('tools-cut').hidden = wrap; $('tools-wrap').hidden = !wrap;
+    $('tab-pack').setAttribute('aria-selected', pack ? 'true' : 'false');
+    $('panel-cut').hidden = !cut; $('panel-wrap').hidden = !wrap; $('panel-pack').hidden = !pack;
+    $('tools-cut').hidden = !cut; $('tools-wrap').hidden = !wrap; $('tools-pack').hidden = !pack;
     fitStage();
     if (wrap) {
       if (!glReady && !glFailed) {
@@ -362,9 +428,10 @@
     } else {
       if (glReady) { Stage.setVisible(false); Stage.pause(); }
       $('player').hidden = true; $('step-chips').hidden = true;
-      Diagram.render($('cut'), plan.chosen, { folds: state.folds, still: true });
-      fitStage();
+      if (cut) { Diagram.render($('cut'), plan.chosen, { folds: state.folds, still: true }); fitStage(); }
+      if (pack) renderPack(true);
     }
+    $('pack-card').hidden = !pack;
   }
 
   function schedule3d(play) {
@@ -426,6 +493,112 @@
     });
   }
 
+  /* ───────── 선물 목록 · 한 롤 배치 ───────── */
+  var GIFT_COLORS = ['#e4574a', '#e8b84e', '#4fa889', '#5b8fd6', '#c27cc2', '#e08a4a', '#7aa24a', '#d9658f'];
+  try { var gs = JSON.parse(localStorage.getItem('ssakduk-gifts') || '[]'); if (Array.isArray(gs)) state.gifts = gs.filter(function (g) { return g && g.spec; }); } catch (e) { }
+  try { var rl = parseFloat(localStorage.getItem('ssakduk-rolllen')); if (rl > 0) state.rollLen = rl; } catch (e) { }
+  function saveGifts() { try { localStorage.setItem('ssakduk-gifts', JSON.stringify(state.gifts)); localStorage.setItem('ssakduk-rolllen', String(state.rollLen)); } catch (e) { } }
+
+  function giftLabel(spec) {
+    var d = [];
+    ['a', 'b', 'h', 'd', 's', 'L'].forEach(function (k) { if (spec[k] != null && (k !== 'h' || spec.shape !== 'ball')) d.push(spec[k]); });
+    var m = spec.method === 'diag' ? ' · 대각선' : spec.method === 'cloth' ? ' · 보자기' : '';
+    return { name: (SHAPE_NAMES[spec.shape] || '선물') + m, dims: d.join('×') };
+  }
+
+  function addGift() {
+    var spec = currentSpec(); delete spec.paper; delete spec.axisPick;
+    state.gifts.push({ id: Date.now() + '' + Math.floor(Math.random() * 1000), spec: spec, qty: 1, color: GIFT_COLORS[state.gifts.length % GIFT_COLORS.length] });
+    saveGifts(); renderGifts();
+    if (state.tab === 'pack') renderPack(true);
+  }
+
+  function renderGifts() {
+    var ul = $('gift-list'); ul.innerHTML = '';
+    var total = 0;
+    state.gifts.forEach(function (g) {
+      total += g.qty;
+      var L = giftLabel(g.spec);
+      var li = el('li', null, '<span class="dot" style="--c:' + g.color + '"></span><span class="g-name">' + esc(L.name) + '<small>' + esc(L.dims) + ' cm</small></span><span class="qty"><button type="button" aria-label="수량 줄이기">−</button><span>' + g.qty + '</span><button type="button" aria-label="수량 늘리기">+</button></span><button type="button" class="del" aria-label="삭제">✕</button>');
+      var bs = li.querySelectorAll('.qty button');
+      bs[0].addEventListener('click', function () { g.qty = Math.max(1, g.qty - 1); saveGifts(); renderGifts(); if (state.tab === 'pack') renderPack(false); });
+      bs[1].addEventListener('click', function () { g.qty = Math.min(20, g.qty + 1); saveGifts(); renderGifts(); if (state.tab === 'pack') renderPack(false); });
+      li.querySelector('.del').addEventListener('click', function () { state.gifts = state.gifts.filter(function (x) { return x !== g; }); saveGifts(); renderGifts(); if (state.tab === 'pack') renderPack(false); });
+      ul.appendChild(li);
+    });
+    $('gift-count').textContent = total + '개';
+  }
+
+  function packRollWidth() { return state.paper.type === 'roll' ? state.paper.R : 70; }
+
+  function renderPack(anim) {
+    if (!window.Pack) return;
+    var R = packRollWidth();
+    var items = state.gifts.map(function (g) {
+      var spec = Object.assign({}, g.spec, { paper: { type: 'roll', R: R }, axisPick: 'auto' });
+      var o = Calc.plan(spec).chosen, L = giftLabel(g.spec);
+      return { id: g.id, name: L.name, dims: L.dims, color: g.color, qty: g.qty, w: up(o.around), h: up(o.along), ok: o.fit.ok };
+    });
+    var res = Pack.compute(items, R);
+    Pack.render($('packsvg'), res, { R: R, rollLen: state.rollLen, anim: anim });
+    fitStage();
+    var sum = $('pack-sum'), msg = $('pack-msg');
+    if (!items.length) {
+      sum.innerHTML = ''; msg.className = 'pack-msg free';
+      msg.textContent = '선물 목록이 비어 있어요. 왼쪽에서 선물 크기를 입력하고 "＋ 지금 선물 담기"를 눌러 보세요.';
+      $('pack-sub').textContent = '롤 폭 ' + f1(R) + 'cm';
+      return;
+    }
+    $('pack-sub').textContent = '롤 폭 ' + f1(R) + 'cm' + (state.paper.type === 'roll' ? '' : ' (기본값)');
+    var len = Math.ceil(res.length), used = res.usedArea, whole = R * res.length;
+    var leftover = Math.max(0, whole - used);
+    sum.innerHTML =
+      '<div class="m"><span>필요한 롤 길이</span><b>' + f1(len) + '<small>cm</small></b></div>' +
+      '<div class="m"><span>조각 수</span><b>' + res.placed.length + '<small>장</small></b></div>' +
+      '<div class="m"><span>종이 이용률</span><b>' + Math.round(res.eff * 100) + '<small>%</small></b></div>' +
+      '<div class="m"><span>남는 자투리</span><b>' + Math.round(leftover).toLocaleString('ko-KR') + '<small>㎠</small></b></div>';
+    var text, cls;
+    if (res.bad.length) {
+      cls = 'bad';
+      text = '😱 롤 폭 ' + f1(R) + 'cm로는 한 장으로 자를 수 없는 선물이 ' + res.bad.length + '개 있어요(' + res.bad.map(function (b) { return b.name; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ') + '). 더 넓은 롤을 쓰거나 두 장을 이어 붙여야 해요. 아래 수치는 나머지 선물만 계산했어요.';
+    } else if (len <= state.rollLen) {
+      cls = 'ok'; text = '🎉 가진 롤 ' + f1(state.rollLen) + 'cm로 충분해요. <b>' + f1(len) + 'cm</b>를 쓰고 <b>' + f1(state.rollLen - len) + 'cm</b>가 남아요.';
+    } else {
+      cls = 'bad';
+      var need = Math.ceil((len - state.rollLen) / 10) * 10;
+      text = '😱 가진 롤 ' + f1(state.rollLen) + 'cm로는 <b>' + f1(len - state.rollLen) + 'cm 모자라요</b>. 같은 폭 롤을 <b>약 ' + f1(need) + 'cm 더</b> 사 두세요.';
+    }
+    msg.className = 'pack-msg ' + cls; msg.innerHTML = text;
+  }
+
+  $('btn-add-gift').addEventListener('click', addGift);
+  $('btn-gift-clear').addEventListener('click', function () { state.gifts = []; saveGifts(); renderGifts(); if (state.tab === 'pack') renderPack(false); });
+  $('btn-pack-open').addEventListener('click', function () { setTab('pack'); var st = $('stage'); if (st && st.scrollIntoView) st.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+  $('btn-repack').addEventListener('click', function () { renderPack(true); });
+  (function rollLenInit() {
+    var inp = $('roll-len'); inp.value = state.rollLen;
+    function set(v) { if (isNaN(v) || v < 0) return; state.rollLen = Math.min(5000, v); inp.value = state.rollLen; saveGifts(); if (state.tab === 'pack') renderPack(false); }
+    inp.addEventListener('input', function () { var v = parseFloat(inp.value); if (!isNaN(v)) { state.rollLen = Math.max(0, Math.min(5000, v)); saveGifts(); if (state.tab === 'pack') renderPack(false); } });
+    $('rl-minus').addEventListener('click', function () { set(state.rollLen - 50); });
+    $('rl-plus').addEventListener('click', function () { set(state.rollLen + 50); });
+  })();
+
+  /* ───────── 사진으로 크기 재기 ───────── */
+  var GROUND = { box: ['a', 'b'], flat: ['a', 'b'], pouch: ['a', 'b'], cyl: ['d'], bottle: ['d'], ball: ['d'], prism: ['s', 'L'] };
+  $('btn-photo').addEventListener('click', function () {
+    if (!window.Photo) return;
+    var fields = DIMS[state.shape].map(function (d) {
+      return { k: d.k, label: d.label, min: d.min, max: d.max, plane: (GROUND[state.shape] || []).indexOf(d.k) >= 0 ? 'ground' : 'side' };
+    });
+    Photo.open({
+      shapeName: SHAPE_NAMES[state.shape], fields: fields, current: state.dims[state.shape],
+      onApply: function (vals) {
+        for (var k in vals) if (vals[k] > 0) state.dims[state.shape][k] = vals[k];
+        state.axisPick = 'auto'; buildDims(); schedule(true);
+      }
+    });
+  });
+
   /* ───────── 시작 ───────── */
   var resizeT = 0;
   window.addEventListener('resize', function () {
@@ -433,7 +606,7 @@
     resizeT = setTimeout(function () { if (state.tab === 'cut' && plan) Diagram.render($('cut'), plan.chosen, { folds: state.folds, still: true }); }, 200);
   });
 
-  buildSwatches(); buildDims(); buildPaper();
+  buildSwatches(); refreshMethod(); buildDims(); buildPaper(); renderGifts();
   $('ovl-out').textContent = f1(state.ovl) + ' cm';
   update(true);
 

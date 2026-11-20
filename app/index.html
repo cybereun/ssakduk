@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gaegu:wght@400;700&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=5">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2314463a'/%3E%3Cpath d='M12 24h40v28H12z' fill='%23c9372c'/%3E%3Crect x='28' y='24' width='8' height='28' fill='%23f3d27a'/%3E%3Cpath d='M32 24c-10-14-22-6-14 0zM32 24c10-14 22-6 14 0z' fill='none' stroke='%23f3d27a' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -44,6 +44,10 @@
           <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 8 56 20v24L32 56 8 44V20z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M8 20l24 12 24-12M32 32v24" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>
           <span>상자</span>
         </button>
+        <button type="button" class="shape" role="radio" data-shape="flat" aria-checked="false">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 30 32 20l24 10v8L32 48 8 38z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M8 30l24 10 24-10M32 40v8" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>
+          <span>납작</span>
+        </button>
         <button type="button" class="shape" role="radio" data-shape="cyl" aria-checked="false">
           <svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="16" rx="18" ry="7" fill="none" stroke="currentColor" stroke-width="3"/><path d="M14 16v32c0 4 8 7 18 7s18-3 18-7V16" fill="none" stroke="currentColor" stroke-width="3"/></svg>
           <span>원통</span>
@@ -52,6 +56,27 @@
           <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M27 6h10v14c0 6 11 8 11 18v18c0 2-2 4-4 4H20c-2 0-4-2-4-4V38c0-10 11-12 11-18z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M16 40h32" stroke="currentColor" stroke-width="3"/></svg>
           <span>병</span>
         </button>
+        <button type="button" class="shape" role="radio" data-shape="ball" aria-checked="false">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="34" r="20" fill="none" stroke="currentColor" stroke-width="3"/><path d="M20 26c3-5 8-8 14-8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M26 10l6 4 6-4" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>
+          <span>공·인형</span>
+        </button>
+        <button type="button" class="shape" role="radio" data-shape="prism" aria-checked="false">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 48 28 14l28 14-12 20z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M8 48h36M28 14 44 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>
+          <span>삼각기둥</span>
+        </button>
+        <button type="button" class="shape" role="radio" data-shape="pouch" aria-checked="false">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 22h36l3 30c0 2-1 4-3 4H14c-2 0-3-2-3-4z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M24 22v-4c0-6 4-9 8-9s8 3 8 9v4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+          <span>봉투·가방</span>
+        </button>
+      </div>
+      <div class="method" id="method-wrap" hidden>
+        <div class="label-s">포장 방식</div>
+        <div class="seg" role="radiogroup" aria-label="포장 방식" id="method">
+          <button type="button" role="radio" data-method="basic" aria-checked="true">기본 감싸기</button>
+          <button type="button" role="radio" data-method="diag" aria-checked="false">일본식 대각선</button>
+          <button type="button" role="radio" data-method="cloth" aria-checked="false">보자기</button>
+        </div>
+        <p class="note" id="method-note"></p>
       </div>
     </section>
 
@@ -62,6 +87,7 @@
       </div>
       <div id="dims" class="dims"></div>
       <div class="presets" id="presets" aria-label="자주 쓰는 크기"></div>
+      <button type="button" class="btn ghost sm photo-btn" id="btn-photo">📷 사진으로 크기 재기 (대략)</button>
     </section>
 
     <section class="card" id="c-paper" aria-labelledby="h-paper">
@@ -77,6 +103,23 @@
         <input type="range" id="ovl" min="2" max="6" step="0.5" value="3">
         <output id="ovl-out" for="ovl">3 cm</output>
       </div>
+    </section>
+
+
+    <section class="card" id="c-gifts" aria-labelledby="h-gifts">
+      <div class="card-head">
+        <h2 id="h-gifts">선물 목록 · 한 롤에 배치</h2>
+        <span class="unit-tag" id="gift-count">0개</span>
+      </div>
+      <p class="note">지금 입력한 선물을 담아 두면, 한 롤에서 어떻게 자르면 가장 알뜰한지 한 번에 계산해요.</p>
+      <button type="button" class="btn sm add-gift" id="btn-add-gift">＋ 지금 선물 담기</button>
+      <ul class="gifts" id="gift-list"></ul>
+      <div class="field slim rolllen" id="rolllen-field">
+        <label for="roll-len">롤 길이</label>
+        <div class="num"><button type="button" id="rl-minus" aria-label="롤 길이 줄이기">−</button><input type="number" id="roll-len" inputmode="decimal" min="0" max="5000" step="50" value="300" aria-label="가진 롤 길이 cm"><button type="button" id="rl-plus" aria-label="롤 길이 늘리기">+</button></div>
+        <output>cm</output>
+      </div>
+      <div class="gift-actions"><button type="button" class="btn ghost sm" id="btn-pack-open">🧩 배치 보기</button><button type="button" class="btn ghost sm" id="btn-gift-clear">비우기</button></div>
     </section>
 
     <section class="card" id="c-style" aria-labelledby="h-style">
@@ -113,10 +156,14 @@
         <div class="tabs" role="tablist" aria-label="보기 전환">
           <button type="button" role="tab" id="tab-cut" aria-selected="true" aria-controls="panel-cut">✂ 재단도</button>
           <button type="button" role="tab" id="tab-wrap" aria-selected="false" aria-controls="panel-wrap">🎁 포장 미리보기</button>
+          <button type="button" role="tab" id="tab-pack" aria-selected="false" aria-controls="panel-pack">🧩 한 롤에 배치</button>
         </div>
         <div class="stage-tools" id="tools-cut">
           <label class="check"><input type="checkbox" id="chk-folds" checked><span>접는 선</span></label>
           <button type="button" class="btn ghost sm" id="btn-recut">↻ 다시 자르기</button>
+        </div>
+        <div class="stage-tools" id="tools-pack" hidden>
+          <button type="button" class="btn ghost sm" id="btn-repack">↻ 다시 맞추기</button>
         </div>
         <div class="stage-tools" id="tools-wrap" hidden>
           <label class="check"><input type="checkbox" id="chk-auto" checked><span>자동 카메라</span></label>
@@ -126,6 +173,9 @@
       <div class="stage" id="stage">
         <div id="panel-cut" role="tabpanel" aria-labelledby="tab-cut" class="panel">
           <svg id="cut" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="포장지 재단선과 접는 선 도면"></svg>
+        </div>
+        <div id="panel-pack" role="tabpanel" aria-labelledby="tab-pack" class="panel" hidden>
+          <svg id="packsvg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="한 롤에 선물 포장지를 배치한 그림"></svg>
         </div>
         <div id="panel-wrap" role="tabpanel" aria-labelledby="tab-wrap" class="panel" hidden>
           <div id="gl" class="gl"></div>
@@ -149,9 +199,15 @@
       <div class="chips-steps" id="step-chips" hidden></div>
     </div>
 
+    <div class="card pack-result" id="pack-card" hidden>
+      <div class="card-head"><h2>한 롤 배치 결과</h2><span class="unit-tag" id="pack-sub"></span></div>
+      <div class="pack-sum" id="pack-sum"></div>
+      <p class="pack-msg" id="pack-msg"></p>
+    </div>
+
     <div class="card" id="options-card" hidden>
       <div class="card-head">
-        <h2>어느 방향으로 감쌀까요?</h2>
+        <h2 id="options-title">어느 방향으로 감쌀까요?</h2>
         <span class="unit-tag">같은 상자도 방향에 따라 종이가 달라져요</span>
       </div>
       <div class="options" id="options" role="radiogroup" aria-label="감싸는 방향"></div>
@@ -165,6 +221,33 @@
     <p class="fine">치수는 상자 바깥 크기 기준의 근사값이에요. 종이 두께와 접는 습관에 따라 ±1cm 정도 달라질 수 있어요.</p>
   </section>
 </main>
+
+
+<div class="overlay" id="photo-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="photo-title">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2 id="photo-title">사진으로 크기 재기 <small>대략 ±5%</small></h2>
+      <button type="button" class="icon-btn" id="photo-close" aria-label="닫기">✕</button>
+    </div>
+    <ol class="photo-tips">
+      <li><b>A4 용지</b>를 선물 바로 옆, <b>같은 바닥</b>에 놓고 가까이에서 찍어요.</li>
+      <li>사진은 이 기기 안에서만 쓰고 어디에도 올리지 않아요.</li>
+    </ol>
+    <label class="filebtn btn sm" for="photo-file">📷 사진 고르기 · 찍기</label>
+    <input type="file" id="photo-file" accept="image/*" capture="environment" hidden>
+    <div class="photo-step" id="photo-step" aria-live="polite">먼저 사진을 골라 주세요.</div>
+    <div class="photo-canvas" id="photo-canvas-wrap" hidden><canvas id="photo-canvas"></canvas></div>
+    <div class="photo-actions" id="photo-actions" hidden>
+      <button type="button" class="btn ghost sm" id="photo-undo">↶ 마지막 점 취소</button>
+      <button type="button" class="btn ghost sm" id="photo-skip" hidden>이 단계 건너뛰기</button>
+    </div>
+    <div class="photo-result" id="photo-result" hidden>
+      <h3>측정 결과 (직접 고칠 수 있어요)</h3>
+      <div class="photo-fields" id="photo-fields"></div>
+      <button type="button" class="btn" id="photo-apply">이 크기로 계산하기</button>
+    </div>
+  </div>
+</div>
 
 <footer class="appfoot">
 <div class="legal">
@@ -185,10 +268,12 @@
 </footer>
 
 <script src="vendor/three.min.js"></script>
-<script src="js/calc.js"></script>
-<script src="js/diagram.js"></script>
-<script src="js/stage3d.js"></script>
-<script src="js/app.js"></script>
+<script src="js/calc.js?v=3"></script>
+<script src="js/diagram.js?v=3"></script>
+<script src="js/stage3d.js?v=5"></script>
+<script src="js/pack.js?v=4"></script>
+<script src="js/photo.js?v=3"></script>
+<script src="js/app.js?v=3"></script>
 <script src="../bgm.js" defer></script>
 </body>
 </html>
